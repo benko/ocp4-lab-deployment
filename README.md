@@ -111,7 +111,8 @@ This can go in any direction, really. Some basics:
  - for non-bridged networks, you will need an additional externally accessible
    interface for the services VM, and a non-IP-managed private network for all
    the VMs (including services) - see the service provisioning playbook for
-   more on configuration
+   more on configuration; bottom line, you will need to add the bridged iface
+   manually after installation
 
 ### Runtime Configuration Variables
 
@@ -133,6 +134,24 @@ playbooks. Here's a non-exhaustive list:
     There are two settings that go along with that - ``vm_bridge_name`` and
     ``vm_network_name``, but they are of course mutually exclusive. The former
     is only used whn ``vm_use_bridge`` is on, and vice-versa.
+
+### Useful Tags
+
+While (re)running the playbooks, some tags may be of particular use because
+they simply save time. Such as:
+
+ - ``rhsm``
+
+    Will skip any subscription-related action. RHSM can be slow, and this just
+    skips those slow steps.
+
+ - ``openvpn``
+
+    While configuring the ``services`` VM, you might not want to deploy an
+    OpenVPN service, for whatever reason, so skipping this tag allows you to
+    simply not even care about the RPMs this would normally use, much less
+    about the configuration of the service and any other bollocks. It does
+    mean, however, that you need to eat your own DNS food. /etc/hosts FTW!
 
 ## Additional Artifacts
 
