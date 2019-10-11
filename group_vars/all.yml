@@ -46,6 +46,12 @@ svc_default_gw: 172.25.250.254
 ip_prefix: 172.25.252
 mac_prefix: 52:54:00:00:fa
 
+# Still in networking. If there is bridged network, say so and tell which
+# interface. Otherwise tell which virt net to use.
+vm_use_bridge: yes
+vm_bridge_name: privbr0
+vm_network_name: ignored-if-use-bridge
+
 # The deployed image URLs. These will depend on the version of OpenShift
 # installer you use, but should be OK for nightly builds. What they mostly
 # affect is just what image URLs the installer will use Nexus for.
@@ -137,6 +143,9 @@ auth_user_username: student
 auth_user_fullname: Student User
 auth_user_password: $6$8oIjLCsc$/n1iQXYh1E6.uOEuJKgioqAtmqm2TQmkJGF2RwyteIr1tIfrPdiRYgWe6Sjen5/eMij2uHM/a1tue/QRlo3X80
 auth_user_publickey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGtUW3ismHyuCW4CDdTVOOOq6aySdtYenXFWWx7HJa4VTepkG00aaLId9ocra10hc+MB0GTJMCyabDv3i8NKdi6GDH/aOLVsp/Ewy8DEzZMBlJDCt4v2i4/wU4liw6KgEFkZs+5hnqU8d4QzldyGJ5onr+AGvFOKG68CS0BBl40Z1twf1HhCyx8k6nzD2ovlkxWRFZKPAFrtPCBVvQDkOfVFZF+lwzaSztgAjbFZ4A9jqQyUYx4kOJ5DtRef36ucdUdVQale0+8lICl7/gb142SPpYfhxe88/BJScLPRjvVNeu1TxRmoHtVazqnAoRxQYAn2MoI6AG+w6QuZf8f7aL LabGradingKey
+
+# This sample root password says "redhat".
+rhel_root_password: $6$IfN//lIj$k6Ui76Hy2W051b4XzMmWnqrUtatCBK7N.WwOpu5SE1X6uqko2RyYvkMJTBK7cEFiTUHLZSs3SLbLZSGglMd8F1
 
 # Authentication-related information.
 # NOTE: THIS IS ALL BOGUS DATA SO DO NOT USE IT. IT WILL NOT WORK!
