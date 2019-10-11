@@ -1,0 +1,10 @@
+aws/cluster/
+bare/cluster/
+bare/files/*.rpm
+bare/files/*.gz
+bare/files/*.iso
+bare/files/rhcos*
+bare/playbooks.vim
+openshift-install*
+.*.swp
+auth-nogit.*
