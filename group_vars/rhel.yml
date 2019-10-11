@@ -1,0 +1,24 @@
+---
+# This is the shared information for all RHEL-based systems. Most probably what
+# you want to put here is the RHSM credentials for subscription-manager.
+#
+# The password is expected to be plaintext, but feel free to use Ansible Vault.
+rhel_sub_user: foobar
+rhel_sub_pass: my-very-secret-password
+
+# If you have a very uniform RHEL system structure (or if it's only the
+# services VM you are touching), you can set some additional vars here as well,
+# otherwise just set them in the corresponding host group settings (like
+# rhel8_server vs rhel7_server).
+
+# Subscription Pool ID for your RHEL systems.
+# NOTE: THIS IS BOGUS DATA. REPLACE IT WITH AN ACTUAL POOL ID.
+rhel_sub_pools:
+  - au1eul0Ku4Quei5kashaezohWe6Phu4v
+
+# Package repositories to enable/disable on the installed system.
+rhel_pkg_repos:
+  - rhel-8-for-x86_64-baseos-rpms
+  - rhel-8-for-x86_64-appstream-rpms
+rhel_pkg_repos_disable: []
+...
