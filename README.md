@@ -108,11 +108,26 @@ This can go in any direction, really. Some basics:
 
  - yes, *libvirt* is a requirement
  - strongly advised, is a single bridge-based network
- - for non-bridged networks, you will need an additional externally accessible
-   interface for the services VM, and a non-IP-managed private network for all
-   the VMs (including services) - see the service provisioning playbook for
-   more on configuration; bottom line, you will need to add the bridged iface
-   manually after installation
+
+#### Non-Bridged Networking Considerations
+
+For non-bridged networks, you will most certainly need two network interfaces
+in the ``services`` VM.
+
+One of the interfaces would be configured by the playbook already - that's
+fine. Keep it, as it allows your cluster hosts on the private network to
+connect to the services VM whenever they need it.
+
+For external access, indeed for *anything* beyond simply provisioning that
+initial ``services`` VM, but not even configuring it, you will need an
+additional directly accessible interface, and subsequently OpenVPN listening on
+it so you can get into the cluster.
+
+The idea is your laptop is an external client to the airgapped system, so it
+needs a VPN connection to access the resources - a nice real-life scenario.
+
+See the service provisioning playbook for more on configuration; bottom line,
+you will need to add the bridged iface manually after installation.
 
 ### Runtime Configuration Variables
 
