@@ -1,0 +1,593 @@
+---
+# NOTE: before running this, give the VM some time to boot first.
+- name: configure additional services on the services vm
+  hosts: services
+  become: yes
+  tasks:
+    - name: wait for vm to finish installing
+      delegate_to: localhost
+      become: no
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        sleep: 10
+        timeout: 300
+        search_regex: OpenSSH
+        state: started
+
+    - name: register and subscribe a system
+      include_tasks: playbooks/reuse/subscribe-and-update.yml
+
+    - name: install packages
+      package:
+        name:
+          - bind
+          - bind-chroot
+          - httpd
+          - haproxy
+          - tftp
+          - tftp-server
+          - syslinux-tftpboot
+          - dhcp-server
+          - java-1.8.0-openjdk
+          - java-1.8.0-openjdk-headless
+          - nfs-utils
+        state: latest
+
+    # some certificate management stuff
+    - name: create a directory for cert stuff
+      file:
+        path: "{{ x509_ca_location }}"
+        owner: root
+        group: root
+        mode: 0755
+        state: directory
+
+    - name: check that there is a CA cert
+      file:
+        path: "{{ x509_ca_location }}/ca.crt"
+        state: file
+      ignore_errors: yes
+      register: ca_cert_exists
+
+    - name: check if there is a CA key then
+      file:
+        path: "{{ x509_ca_location }}/ca.key"
+        state: file
+      ignore_errors: yes
+      register: ca_key_exists
+      when: ca_cert_exists.failed | default(false)
+
+    - name: check that the CA cert will live for at least three more years
+      openssl_certificate:
+        provider: assertonly
+        path: "{{ x509_ca_location }}/ca.crt"
+        valid_in: "+1095d"
+      ignore_errors: yes
+      register: ca_cert_valid
+      when: not (ca_cert_exists.failed | default(false))
+
+    - name: create a new private key
+      openssl_privatekey:
+        path: "{{ x509_ca_location }}/ca.key"
+        passphrase: "{{ x509_ca_pass }}"
+        cipher: AES-256-CBC
+        size: 8192
+        state: present
+        owner: root
+        group: root
+        mode: 0600
+      when:
+        - ca_cert_exists.failed | default(false)
+        - ca_key_exists.failed | default(false)
+
+    - name: create a new CSR
+      openssl_csr:
+        path: "{{ x509_ca_location }}/ca.csr"
+        privatekey_path: "{{ x509_ca_location }}/ca.key"
+        privatekey_passphrase: "{{ x509_ca_pass }}"
+        common_name: Red Hat GLS Course Signing Certificate
+        organization_name: Red Hat
+        organizational_unit_name: GLS
+        locality_name: Europe
+        country_name: EU
+        email_address: training@europe.redhat.com
+        key_usage:
+          - cRLSign
+          - keyCertSign
+        key_usage_critical: no
+        basic_constraints:
+          - "CA:TRUE"
+        basic_constraints_critical: no
+        state: present
+        owner: root
+        group: root
+        mode: 0600
+      when: ca_cert_exists.failed | default(false)
+
+    - name: create a new self-signed ca certificate if needed
+      openssl_certificate:
+        provider: selfsigned
+        selfsigned_not_after: "{{ x509_validity_until }}"
+        path: "{{ x509_ca_location }}/ca.crt"
+        csr_path: "{{ x509_ca_location }}/ca.csr"
+        privatekey_path: "{{ x509_ca_location }}/ca.key"
+        privatekey_passphrase: "{{ x509_ca_pass }}"
+        force: yes
+        state: present
+        owner: root
+        group: root
+        mode: 0644
+      when: (ca_cert_exists.failed | default(false)) or (ca_cert_valid.failed | default(false))
+
+    # trust our own CA cert
+    - name: trust our own CA cert
+      copy:
+        src: "{{ x509_ca_location }}/ca.crt"
+        dest: /etc/pki/ca-trust/source/anchors/gls.pem
+        remote_src: yes
+        owner: root
+        group: root
+        mode: 0644
+      register: new_ca
+
+    - name: extract new trust information
+      command: /usr/bin/update-ca-trust extract
+      when: new_ca.changed
+
+    # generate other service certificates
+    - name: generate openvpn certs
+      vars:
+        cert_service_name: openvpn
+        cert_common_name: "{{ vms['services'].hostname }}"
+      include_tasks: playbooks/reuse/create-cert-artifacts.yml
+
+    - name: generate registry certs
+      vars:
+        cert_service_name: nexus
+        cert_common_name: "registry.{{ parent_domain }}"
+      include_tasks: playbooks/reuse/create-cert-artifacts.yml
+
+    # openvpn installation
+    - name: see if we need to install openvpn
+      command: rpm -q openvpn
+      args:
+        warn: no
+      register: openvpn_installed
+      changed_when: '"installed" in openvpn_installed.stdout'
+      ignore_errors: yes
+      tags:
+        - openvpn
+
+    - name: copy openvpn packages somewhere
+      copy:
+        src: "{{ item }}"
+        dest: /tmp
+        owner: root
+        group: root
+        mode: 0644
+      loop:
+        - openvpn-{{ openvpn_release }}.el8.x86_64.rpm
+        - pkcs11-helper-{{ pkcs11_release }}.el8.x86_64.rpm
+      when: openvpn_installed.failed
+      tags:
+        - openvpn
+
+    - name: install openvpn directly
+      command: >
+        /usr/bin/yum -y localinstall
+        /tmp/openvpn-{{ openvpn_release }}.el8.x86_64.rpm 
+        /tmp/pkcs11-helper-{{ pkcs11_release }}.el8.x86_64.rpm
+      args:
+        warn: no
+      when: openvpn_installed.failed
+      tags:
+        - openvpn
+
+    - name: get rid of the rpm files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - openvpn-{{ openvpn_release }}.el8.x86_64.rpm
+        - pkcs11-helper-{{ pkcs11_release }}.el8.x86_64.rpm
+      when: openvpn_installed.failed
+      tags:
+        - openvpn
+
+      # TODO: configure service
+      # TODO: open ports
+      # TODO: (re)start openvpn
+
+    # dns server configuration
+    - name: configure named
+      template:
+        src: templates/named.conf.j2
+        dest: /etc/named.conf
+        owner: root
+        group: named
+        mode: 0640
+      notify: (re)start the dns server
+
+    - name: make sure the firewall accepts dns
+      firewalld:
+        service: dns
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: make sure rfc zone files exist in chroot
+      file:
+        path: /var/named/chroot/var/named/{{ item }}
+        src: /var/named/{{ item }}
+        state: hard
+      loop:
+        - named.ca
+        - named.empty
+        - named.localhost
+        - named.loopback
+      notify: (re)start the dns server
+
+    - name: publish zone
+      template:
+        src: templates/ocp-dns.zone.j2
+        dest: /var/named/chroot/var/named/{{ parent_domain }}.zone
+        owner: root
+        group: named
+        mode: 0640
+      notify: (re)start the dns server
+
+    # web server configuration
+    - name: configure web server
+      template:
+        src: templates/httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the web server
+
+    - name: configure default vhost
+      template:
+        src: templates/vhost.conf.j2
+        dest: /etc/httpd/conf.d/00_default.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the web server
+
+    - name: configure proxy catch-all vhost
+      vars:
+        create_proxy_config: yes
+      template:
+        src: templates/vhost.conf.j2
+        dest: /etc/httpd/conf.d/99_proxy_all.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the web server
+
+    # TODO: publish artifacts here?
+
+    - name: make sure the firewall accepts http
+      firewalld:
+        service: http
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    # haproxy configuration
+    - name: configure haproxy
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start haproxy
+
+    - name: make sure the firewall accepts https
+      firewalld:
+        service: https
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: also make sure the firewall accepts all the weirdo ports
+      firewalld:
+        port: "{{ item }}/tcp"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop:
+        - 81
+        - 6443
+        - 22623
+
+    - name: haproxy needs some seboolean love
+      seboolean:
+        name: haproxy_connect_any
+        state: true
+        persistent: yes
+      notify: (re)start haproxy
+
+    # dhcp server configuration
+    - name: configure dhcp server
+      template:
+        src: templates/dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the dhcp server
+
+    - name: make sure the firewall accepts dhcp
+      firewalld:
+        service: dhcp
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    # tftp server configuration
+    - name: enable tftp server
+      systemd:
+        name: tftp.socket
+        enabled: yes
+        state: started
+
+    - name: make sure the firewall accepts tftp
+      firewalld:
+        service: tftp
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: copy pxelinux files to tftp root
+      copy:
+        src: /tftpboot/{{ item }}
+        dest: /var/lib/tftpboot/{{ item }}
+        remote_src: yes
+      loop:
+        - pxelinux.0
+        - ldlinux.c32
+
+    - name: create pxelinux.cfg
+      file:
+        path: /var/lib/tftpboot/pxelinux.cfg
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    # nexus configuration
+    - name: check if nexus is there and operational
+      file:
+        path: /opt/sonatype-work/nexus3/lock
+        state: file
+      ignore_errors: yes
+      register: nexus_is_there
+
+    - name: extract the nexus archive
+      unarchive:
+        src: files/nexus-{{ nexus_release }}-unix.tar.gz
+        dest: /opt
+        owner: root
+        group: root
+      notify: (re)start nexus
+      when: nexus_is_there.failed
+
+    - name: make sure we have somewhere to put the properties
+      file:
+        path: /opt/sonatype-work/nexus3/etc
+        state: directory
+
+    - name: publish nexus.properties
+      copy:
+        src: files/nexus.properties
+        dest: /opt/sonatype-work/nexus3/etc/nexus.properties
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start nexus
+
+    - name: publish jetty-https.xml
+      template:
+        src: templates/nexus.jetty.xml.j2
+        dest: /opt/nexus-{{ nexus_release }}/etc/jetty/jetty-https.xml
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start nexus
+
+    - name: make sure we have somewhere to put the keystore
+      file:
+        path: /opt/sonatype-work/nexus3/etc/ssl
+        state: directory
+
+    - name: create a pkcs12-formatted bundle
+      openssl_pkcs12:
+        action: export
+        path: "{{ x509_ca_location }}/nexus.p12"
+        passphrase: "{{ nexus_keystore_pass }}"
+        certificate_path: "{{ x509_ca_location }}/nexus.crt"
+        privatekey_path: "{{ x509_ca_location }}/nexus.key"
+        other_certificates: "{{ x509_ca_location }}/ca.crt"
+        friendly_name: "{{ nexus_key_alias }}"
+        state: present
+        owner: root
+        group: root
+        mode: 0640
+      register: pkcs12
+
+    - name: remove existing keystore if anything about p12 changed
+      file:
+        path: /opt/sonatype-work/nexus3/etc/ssl/keystore.jks
+        state: absent
+      when: pkcs12.changed
+
+    - name: about time we create a keystore
+      java_cert:
+        pkcs12_path: "{{ x509_ca_location }}/nexus.p12"
+        pkcs12_alias: "{{ nexus_key_alias }}"
+        pkcs12_password: "{{ nexus_keystore_pass }}"
+        cert_alias: "{{ nexus_key_alias }}"
+        keystore_create: yes
+        keystore_pass: "{{ nexus_keystore_pass }}"
+        keystore_path: /opt/sonatype-work/nexus3/etc/ssl/keystore.jks
+        keystore_type: JKS
+        state: present
+      notify: (re)start nexus
+
+    # TODO: recreate backups without registry authentication options!
+    # https://support.sonatype.com/hc/en-us/articles/115013153887-Docker-Repository-Configuration-and-Client-Connection
+    - name: make sure we have somewhere to put the backups
+      file:
+        path: /opt/sonatype-work/nexus3/restore-from-backup
+        state: directory
+
+    - name: put the config backups where they belong
+      unarchive:
+        src: files/nexus-db-backup.tar.gz
+        dest: /opt/sonatype-work/nexus3/restore-from-backup
+        owner: root
+        group: root
+      notify: (re)start nexus
+
+    - name: extract the nexus blob backups
+      unarchive:
+        src: files/nexus-blob-backup.tar.gz
+        dest: /opt/sonatype-work/nexus3
+        owner: root
+        group: root
+      notify: (re)start nexus
+
+    - name: add nexus.service for systemd
+      template:
+        src: templates/nexus.service.j2
+        dest: /etc/systemd/system/nexus.service
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start nexus
+
+    - name: make sure the firewall is open for nexus
+      firewalld:
+        port: "{{ item }}"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop:
+        - 5000/tcp
+        - 8081/tcp
+        - 8443/tcp
+
+    # add nfs server
+    - name: create exported directories
+      file:
+        path: "{{ nfs_parent }}/{{ item.name }}"
+        state: directory
+        owner: nobody
+        group: nobody
+        mode: 0770
+      loop: "{{ nfs_exports }}"
+
+    - name: now also generate the exports file
+      template:
+        src: templates/nfsexports.j2
+        dest: /etc/exports.d/ocp.exports
+        owner: root
+        group: root
+        mode: 0644
+      register: exports
+
+    - name: finally, run exportfs if anything got changed
+      command: /usr/sbin/exportfs -ar
+      when: exports.changed
+
+    - name: make sure the firewall is open for nfs as well
+      firewalld:
+        service: "{{ item }}"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop:
+        - rpc-bind
+        - nfs
+        - nfs3
+        - mountd
+
+    - name: enable the nfs server service and start it if not yet there
+      service:
+        name: nfs-server
+        enabled: yes
+        state: started
+
+  # the heavy duty handlers :)
+  handlers:
+    - name: (re)start the dns server
+      service:
+        name: named-chroot
+        enabled: yes
+        state: restarted
+
+    - name: (re)start the web server
+      service:
+        name: httpd
+        enabled: yes
+        state: restarted
+
+    - name: (re)start haproxy
+      service:
+        name: haproxy
+        enabled: yes
+        state: restarted
+
+    - name: (re)start the dhcp server
+      service:
+        name: dhcpd
+        enabled: yes
+        state: restarted
+
+    - name: (re)start nexus
+      service:
+        name: nexus
+        enabled: yes
+        state: restarted
+
+- name: fix some local config stuffs after the handlers
+  hosts: services.ocp4.p0f.local
+  become: yes
+  tasks:
+    - name: check that named is running and operational
+      service:
+        name: named-chroot
+        state: started
+      register: named_status
+
+    - name: do a simple query of a wildcard record
+      command: /usr/bin/dig -t A nonexistent.apps.{{ cluster_name }}.{{ parent_domain }}. @127.0.0.1
+      register: dnsquery
+
+    - name: check the dns query response
+      set_fact:
+        named_is_running: >
+          {{ dnsquery.stdout | regex_search('^nonexistent.apps.' ~ cluster_name ~ '.' ~ parent_domain ~ '.', multiline=True) }}
+
+    - name: edit /etc/resolv.conf and point it to localhost
+      lineinfile:
+        path: /etc/resolv.conf
+        regexp: "^nameserver .*"
+        line: "nameserver 127.0.0.1"
+        state: present
+      when: "named_is_running == 'nonexistent.apps.' ~ cluster_name ~ '.' ~ parent_domain ~ '.\n'"
+
+    - name: or fail if dns is not working
+      assert:
+        fail_msg: |
+          DNS does not appear to be running (or resolving correctly) on {{ inventory_hostname }}!!!
+          This will most certainly break the rest of deployment, so please review and fix it!
+        success_msg: |
+          Everything resolver-related appears to be in order. You can proceed to cluster deployment.
+        that:
+          - "named_is_running == 'nonexistent.apps.' ~ cluster_name ~ '.' ~ parent_domain ~ '.\n'"
+...
