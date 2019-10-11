@@ -1,0 +1,6 @@
+---
+# We provision our own non-privileged user in RHEL installations. We need to
+# explain this to Ansible.
+ansible_user: "{{ auth_user_username }}"
+...
+
