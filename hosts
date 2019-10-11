@@ -1,0 +1,52 @@
+# OCP4 nodes by operating system
+#
+# RHCOS nodes:
+[ocp_coreos]
+bootstrap.foo.ocp4.p0f.local
+master.foo.ocp4.p0f.local
+worker1.foo.ocp4.p0f.local
+worker2.foo.ocp4.p0f.local
+
+# RHEL8 node:
+[ocp_rhel]
+services.ocp4.p0f.local
+
+# These groups exist because of the ability to share the same process of
+# subscribing the physical and virtual machines to RHSM, activating
+# subscriptions and repositories, and updating packages.
+#
+# Because the only RHEL VM is actually the services VM, all RHEL stuff could
+# actually be moved to just the ocp_rhel group, but the breakdown is kept
+# around because of the additional hypervisor setup option.
+#
+# Have a look at corresponding group_vars files to configure subscriptions, but
+# basically the trick is this:
+#   - rhel is the top level group: use it for RHSM credentials at least
+#   - if you use the same subscription for all VMs, set the pools there as well
+#   - otherwise, set the subscription pools on a per-group basis
+#   - in any case, set up which repositories to enable on a per-version basis
+#
+# The important bit is that the rhel8 group contains the ocp_rhel group.
+[rhel7_server]
+
+[rhel8_server:children]
+ocp_rhel
+
+[rhel:children]
+rhel7_server
+rhel8_server
+
+# UNSUPPORTED: Put your hypervisor systems here if you want to manage them with
+# playbooks. There is a full libvirt configuration procedure there, but it
+# unfortunately expects the system to be dedicated and freshly installed from
+# scratch.
+[hypervisors]
+host1.p0f.local
+host2.p0f.local
+host3.p0f.local
+
+[rhel8_server]
+host1.p0f.local
+host2.p0f.local
+host3.p0f.local
+
