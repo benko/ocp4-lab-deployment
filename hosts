@@ -1,15 +1,20 @@
+# What you need here is to resolve these hosts. At least initially, it's
+# probably going to be easiest to put these into /etc/hosts on the control
+# node. If you have a DNS you can use, even better. Or, if you want to, add
+# ansible_host variable to each of those.
+#
 # OCP4 nodes by operating system
 #
 # RHCOS nodes:
 [ocp_coreos]
-bootstrap.foo.ocp4.p0f.local
-master.foo.ocp4.p0f.local
-worker1.foo.ocp4.p0f.local
-worker2.foo.ocp4.p0f.local
+bootstrap.ocp.lab.example.com
+master.ocp.lab.example.com
+worker1.ocp.lab.example.com
+worker2.ocp.lab.example.com
 
 # RHEL8 node:
 [ocp_rhel]
-services.ocp4.p0f.local
+services.lab.example.com
 
 # These groups exist because of the ability to share the same process of
 # subscribing the physical and virtual machines to RHSM, activating
@@ -41,12 +46,12 @@ rhel8_server
 # unfortunately expects the system to be dedicated and freshly installed from
 # scratch.
 [hypervisors]
-host1.p0f.local
-host2.p0f.local
-host3.p0f.local
+host1.example.com
+host2.example.com
+host3.example.com
 
 [rhel8_server]
-host1.p0f.local
-host2.p0f.local
-host3.p0f.local
+host1.example.com
+host2.example.com
+host3.example.com
 
