@@ -5,12 +5,6 @@
 This project describes (and implements) one way of deploying OCP4 nightly
 builds in a minimal airgapped lab environment.
 
-> **NOTE:** The container images required for an offline installation are
-not included here. You will need to deploy OCP with internet access for the
-``services`` VM at least once in order to "seed" the Nexus repository.
-After that, you can repeat it as many times as you like with no internet
-connectivity.
-
 This is not an elaborate on how OpenShift installation works, how it should be
 administered, and how the cluster is operated. Nor is it a document on how and
 why any of the involved components work, and how to deploy or configure them.
@@ -21,17 +15,23 @@ However, if you do endeavour to read some of the playbooks and vars here, there
 will be the occasional comment outlining quirks, gotchas, and pointing back to
 this file.
 
+> **NOTE:** The container images required for an offline installation are
+not included here. You will need to deploy OCP with internet access for the
+``services`` VM at least once in order to "seed" the Nexus repository.
+After that, you can repeat it as many times as you like with no internet
+connectivity.
+
 ## Topology
 
 The topology of the lab rendered by this project is as follows:
 
  - 1 service VM running RHEL8 and the following:
-    - a DNS server for the internal OCP zones
+    - a DNS server for the internal OCP zones and forwarding enabled
     - a DHCP/TFTP PXE boot environment for RHCOS
     - a HTTP server for RHCOS boot artifacts and other misc
     - an Haproxy load balancer for OCP install (and optionally, ingress)
-    - a Nexus3 OSS Repository Manager for facilitating airgap
-    - a NFS server to provide the cluster with storage
+    - a Nexus3 OSS Repository Manager for facilitating the airgap
+    - an NFS server to provide the cluster with storage
     - optionally, an OpenVPN service for dialing into the cluster
  - 1 master VM
  - 2 worker VMs
@@ -50,7 +50,7 @@ Individual VM recommendations are as follows:
  - worker VM: 6GB, 4 cores
  - bootstrap VM: 4GB, 4 cores
 
-Disk space is thin-provisioned, but defaults to 64GB per image.
+Disk space is thin-provisioned, but defaults to 64GB per system (single image).
 
 ## Software Requirements
 
@@ -63,6 +63,16 @@ on RHEL7, RHEL8, and even CentOS systems, so you should be good to go.
 
 That being said, **the absolute minimum version of Ansible is 2.8**!
 
+Some of the Ansible modules used require additional Python modules on the
+control node, which might not be installed by default on your system.
+
+TBD.
+
+For the control node, you will also need the following:
+
+ - OpenShift Installer nightly build (I used 4.2.0-0 20191007-203748)
+ - OpenShift Client nightly build (same version as installer)
+
 Additional software you will need before you proceed with your VMs:
 
  - RHEL 8.0 GA boot ISO image
@@ -70,12 +80,8 @@ Additional software you will need before you proceed with your VMs:
  - Nexus Repository Manager OSS v3 UNIX archive (I used v3.19.1-01)
  - OpenVPN and PKCS11 Helper RPMs from EPEL8 and a client (optional)
 
-For the control node, you will need the following:
-
- - OpenShift Installer nightly build (I used 4.2.0-0 20191007-203748)
- - OpenShift Client nightly build (same version as installer)
-
-Eventually, once you did a connected installation, you can create a backup of Nexus repositories and include that 
+Eventually, once you did a connected installation, you can create a backup of
+Nexus repositories and include that in your future deployments.
 
 ## Configuration
 
@@ -83,7 +89,7 @@ Using Ansible obviously implies some things: it is expected that your control
 node can communicate with, and authenticate against, any hosts you choose to
 involve in this, and that privilege escalation is configured correctly.
 
-The ``ansible.cfg`` files will probably work well unmodified, but you also
+The ``ansible.cfg`` files will probably work well unmodified, but you
 definitely want to have a look at the ``hosts`` inventory and customise it for
 your needs and desires.
 
@@ -91,8 +97,8 @@ You *most definitely* want to have a look at the ``group_vars`` directory,
 especially the ``all.yml`` file, because it contains all the important
 configuration settings.
 
-That being said, do not neglect to have a look at others - you may need to
-change bits and pieces here and there.
+That being said, do not neglect to have a look at other var files - you may
+need to change bits and pieces here and there.
 
 ## Additional Artifacts
 
