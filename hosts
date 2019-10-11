@@ -3,7 +3,13 @@
 # node. If you have a DNS you can use, even better. Or, if you want to, add
 # ansible_host variable to each of those.
 #
-# OCP4 nodes by operating system
+# This is to be able to target the services VM without knowing all the details.
+[services]
+services.lab.example.com
+
+# Mostly anything beyond this point is grouped because of group_vars.
+#
+# OCP4 nodes by operating system. 
 #
 # RHCOS nodes:
 [ocp_coreos]
@@ -13,8 +19,8 @@ worker1.ocp.lab.example.com
 worker2.ocp.lab.example.com
 
 # RHEL8 node:
-[ocp_rhel]
-services.lab.example.com
+[ocp_rhel:children]
+services
 
 # These groups exist because of the ability to share the same process of
 # subscribing the physical and virtual machines to RHSM, activating
@@ -29,9 +35,9 @@ services.lab.example.com
 #   - rhel is the top level group: use it for RHSM credentials at least
 #   - if you use the same subscription for all VMs, set the pools there as well
 #   - otherwise, set the subscription pools on a per-group basis
-#   - in any case, set up which repositories to enable on a per-version basis
+#   - in any case, set up repositories to enable on a per-rhel-version basis
 #
-# The important bit is that the rhel8 group contains the ocp_rhel group.
+# The important bit is to keep ocp_rhel group inside rhel8.
 [rhel7_server]
 
 [rhel8_server:children]
@@ -41,23 +47,24 @@ ocp_rhel
 rhel7_server
 rhel8_server
 
-# These are the target systems to deploy the cluster to.
+# This is the target system to deploy the cluster to. ***SINGULAR***
 #
 # NOTE: the way the playbooks are written right now, by placing more than one
-# host into this group, you will actually get several identical deployments on
-# each of those. A funny side effect, but one worth considering.
+# host into this group, you will actually get several identical services VM
+# deployments, but afterwards, we can't proceed.
+#
+# We would need to be able to delegate services VM provisioning to *all* of the
+# services VMs, which is simply not possible, because by definition, all of
+# them are on different hosts, but all of them have the same IP, which makes up
+# for a very very nice networking mess, if nothing else.
 #
 # UNSUPPORTED: Put your hypervisor systems here if you want to manage them with
 # playbooks. There is a full libvirt configuration procedure there, but it
 # unfortunately expects the system to be dedicated and freshly installed from
 # scratch.
-[hypervisors]
-host1.example.com
-host2.example.com
-host3.example.com
+#[hypervisors]
+host.example.com
 
 [rhel8_server]
-host1.example.com
-host2.example.com
-host3.example.com
+host.example.com
 
