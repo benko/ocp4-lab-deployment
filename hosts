@@ -41,6 +41,12 @@ ocp_rhel
 rhel7_server
 rhel8_server
 
+# These are the target systems to deploy the cluster to.
+#
+# NOTE: the way the playbooks are written right now, by placing more than one
+# host into this group, you will actually get several identical deployments on
+# each of those. A funny side effect, but one worth considering.
+#
 # UNSUPPORTED: Put your hypervisor systems here if you want to manage them with
 # playbooks. There is a full libvirt configuration procedure there, but it
 # unfortunately expects the system to be dedicated and freshly installed from
