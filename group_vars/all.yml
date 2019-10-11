@@ -1,0 +1,148 @@
+---
+# These are the global settings for the cluster deployment.
+#
+# OpenShift Cluster configuration.
+#
+# Some suggestions on where to put things:
+#  - binary artifacts path (for purposes of easy .gitignore)
+binary_artifact_path: binaries/
+#  - the cluster state directory
+openshift_rtdata_path: cluster/
+#  - the installer binary
+openshift_installer_path: "{{ binary_artifact_path }}/openshift-install"
+#  - the RHEL ISO image to use (all expected in binary_artifact_path)
+rhel8_artifacts:
+  - rhel-8.0-x86_64-dvd.iso
+#  - the RHEL CoreOS release and artifacts (same, binary_artifact_path)
+coreos_release: 42.80.20190828.2
+coreos_http_artifacts:
+  - rhcos-{{ coreos_release }}-metal-bios.raw.gz
+  - rhcos-{{ coreos_release }}-metal-uefi.raw.gz
+coreos_tftp_artifacts:
+  - rhcos-{{ coreos_release }}-installer-kernel
+  - rhcos-{{ coreos_release }}-installer-initramfs.img
+
+# Other package versions - these are also expected in binary_artifact_path.
+# OpenVPN and PKCS11 helper are optional, skip with --skip-tags=openvpn
+# (both are from https://epel.ip-connect.info/8/Everything/x86_64/Packages/)
+nexus_release: 3.19.1-01
+openvpn_release: 2.4.7-1
+pkcs11_release: 1.22-7
+
+# DNS settings. "cluster_name" becomes a subdomain of "parent_domain".
+# All the virtual machines (except services) are provisioned in the cluster
+# domain. services VM is provisioned in parent domain.
+parent_domain: lab.example.com
+cluster_name: ocp
+
+# The forwarding DNS server to configure services VM with.
+fwd_dns_server: 172.25.254.254
+
+# Similarly, the (actual) default gateway for the services VM.
+svc_default_gw: 172.25.250.254
+
+# Since we're talking about addressing, let's also set the MAC address and IP
+# subnet prefix here. Free for you to change, of course.
+ip_prefix: 172.25.252
+mac_prefix: 52:54:00:00:fa
+
+# The deployed image URLs. These will depend on the version of OpenShift
+# installer you use, but should be OK for nightly builds. What they mostly
+# affect is just what image URLs the installer will use Nexus for.
+ocp_release_image: openshift-release-dev/ocp-release-nightly
+ocp_worker_image: openshift-release-dev/ocp-v4.0-art-dev
+
+# NFS server exports for PersistentVolume provisioning. The important bit is
+# that the registry PV is at least 100Gi. Create as many as you want here, the
+# playbooks will create both the directories on NFS server (and export them)
+# and provision the PVs at a later point.
+nfs_parent: /var/exports
+nfs_exports:
+  - name: registry
+    capacity: 100Gi
+  - name: vol01
+    capacity: 1Gi
+  - name: vol02
+    capacity: 3Gi
+  - name: vol03
+    capacity: 5Gi
+  - name: vol04
+    capacity: 10Gi
+  - name: vol05
+    capacity: 15Gi
+
+# We create a certificate authority as part of the installation. These are the
+# related settings. The reason validity is an absolute date is because with a
+# relative date, all cert-related operations become non-idempotent.
+# NOTE: *All* generated certificates will use this expiration date.
+x509_ca_location: /var/www/html/ca
+x509_ca_pass: veryverysecret
+x509_validity_until: '20291011000000Z'
+
+# Nexus Repository Manager v3 certificate settings.
+nexus_key_alias: nexus
+nexus_keystore_pass: anotherverysecret
+
+# The VM catalog.
+vms:
+  # The default settings that VMs can override (resolved at play level).
+  # These (obviously) do not provide hostname, mac, and ipaddr.
+  global:
+    netmask: 255.255.255.0
+    dns: "{{ ip_prefix }}.21"   # use services VM - XXX DO NOT CHANGE THIS! XXX
+    tz: Europe/Tallinn
+    mem_gb: 6
+    ncpus: 4
+    # Unfortunately we need the gateway for airgap install, because NM refuses
+    # to set the hostname if it has no interfaces with default gateway. In
+    # other words, the only way to set a hostname for a VM using DHCP is to
+    # have at least one interface with a default gateway. We'll make it a bogus
+    # one, of course - no other VM except the services one needs internet
+    # access, and even that one only the first time around.
+    # Alternatively, you can of course set this to svc_default_gw and have your
+    # cluster register itself in RH Cloud Manager, and/or use online registries.
+    gw: "{{ ip_prefix }}.199"
+  services:
+    hostname: services.{{ parent_domain }}
+    mac: "{{ mac_prefix }}:21"
+    ipaddr: "{{ ip_prefix }}.21"
+    dns: "{{ fwd_dns_server }}" # this will eventually become the forwarder
+    gw: "{{ svc_default_gw }}"  # this is an actual valid default gateway
+    mem_gb: 3
+    ncpus: 2
+  bootstrap:
+    hostname: bootstrap.{{ cluster_name }}.{{ parent_domain }}
+    mac: "{{ mac_prefix }}:31"
+    ipaddr: "{{ ip_prefix }}.31"
+    mem_gb: 4
+  master:
+    hostname: master.{{ cluster_name }}.{{ parent_domain }}
+    mac: "{{ mac_prefix }}:40"
+    ipaddr: "{{ ip_prefix }}.40"
+    mem_gb: 8
+  worker1:
+    hostname: worker1.{{ cluster_name }}.{{ parent_domain }}
+    mac: "{{ mac_prefix }}:41"
+    ipaddr: "{{ ip_prefix }}.41"
+  worker2:
+    hostname: worker2.{{ cluster_name }}.{{ parent_domain }}
+    mac: "{{ mac_prefix }}:42"
+    ipaddr: "{{ ip_prefix }}.42"
+
+# This user will be created in all RHEL VMs (which is basically, services).
+# By default, this user's password is "student". The SSH public key though,
+# will be published in *all* VMs, including RHEL CoreOS. The target user to
+# access those systems is "core".
+auth_user_username: student
+auth_user_fullname: Student User
+auth_user_password: $6$8oIjLCsc$/n1iQXYh1E6.uOEuJKgioqAtmqm2TQmkJGF2RwyteIr1tIfrPdiRYgWe6Sjen5/eMij2uHM/a1tue/QRlo3X80
+auth_user_publickey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGtUW3ismHyuCW4CDdTVOOOq6aySdtYenXFWWx7HJa4VTepkG00aaLId9ocra10hc+MB0GTJMCyabDv3i8NKdi6GDH/aOLVsp/Ewy8DEzZMBlJDCt4v2i4/wU4liw6KgEFkZs+5hnqU8d4QzldyGJ5onr+AGvFOKG68CS0BBl40Z1twf1HhCyx8k6nzD2ovlkxWRFZKPAFrtPCBVvQDkOfVFZF+lwzaSztgAjbFZ4A9jqQyUYx4kOJ5DtRef36ucdUdVQale0+8lICl7/gb142SPpYfhxe88/BJScLPRjvVNeu1TxRmoHtVazqnAoRxQYAn2MoI6AG+w6QuZf8f7aL LabGradingKey
+
+# Authentication-related information.
+# NOTE: THIS IS ALL BOGUS DATA SO DO NOT USE IT. IT WILL NOT WORK!
+#
+# Do the needful, as they say, and get yourself an actual pull secret from
+# try.openshift.com - you just need a (free) Red Hat account for that, and
+# you'll need it to download the installer and the client anyway.
+auth_user_pullsecret: '{"auths":{"cloud.openshift.com":{"auth":"b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K2VpcGhhaTFzaGFoc2g0RWVwaGFlZ2hlZXNhaDBhaWc3dGhvS2FpbmdhOGNoZTB2aTk6RUVZM0FJUVVFSTVJTkdJRVoyVEhVVjlPSEJJMUdFRVlFSVJVRkVJVzZMQUhORzNDSEVBUjFBRUZVRkVFNVNPSA==","email":"student@example.com"},"quay.io":{"auth":"b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K2VpcGhhaTFzaGFoc2g0RWVwaGFlZ2hlZXNhaDBhaWc3dGhvS2FpbmdhOGNoZTB2aTk6RUVZM0FJUVVFSTVJTkdJRVoyVEhVVjlPSEJJMUdFRVlFSVJVRkVJVzZMQUhORzNDSEVBUjFBRUZVRkVFNVNPSA==","email":"student@example.com"},"registry.connect.redhat.com":{"auth":"MzQ1NjcyM3x1aGMtcGhhNWFld2lvUGg3TG9vcmU5amVpdG9oNm9oOmV5SmhiR2NpT2lKU1V6VXhNaUo5LmV5SnpkV0lpT2lJMVpEVTROVEl5TkdGaFlXUTBNV0l3T1dJeU1qVTFNamhtWXpKbVlqbGpNU0o5LnVXb2hvaEQzbm9veGlldzZiYTR1Q2hlZXRodTdzaHUyZWVQaDBob28xY2FpUjBlZW0wZWlTaDNnYWVMaThDaGFlOWFldzdkZWl5ZWlnM2lldmllYm9oUHV5MGJpZWwzZGFpcmVpMm9TaDBlaXNoYWgxb3RoZW92b29naDhmb290aGE1a3VvcXVvM1Rob280cGU5VXN1d2VlbjVlaWxpa2VleTBlaWI0a2VpY2FpTmc1YXBpZWRhaXRlZWZpZThtdW8yZWVmdThlZXF1MXllaXJvYTFiYWkyYm9vUnVwOWlQZXAwQVRpdWxhaHF1dTRCb3VTaGFoOU5haHh1YWJhaFM0ZWVzaGFpM1R1OGFleDBsZWk5bW9vbmFpaGFlV2k3a2VlYmk3YXNoZTBxdWFoamllMHpvaHRoaXY0dmVpNG9qYXhvaHlhaVNoZXVzM2lvZ2g0ZWlzaDFjaG9vNnZhaTJ1dVBpZXBodXVtYWVnaDhvaGZlZWdhMW9pNWFlU29vNXNodVBob2gxdHVlcXVhaWphN2FuYWU2ZWRlbml0aGEydW5vTmdvb2NoZWk3U2hhZXNhdmFldGhlZXRob2h6OWVlbm9vNG9naGFlcGg3bm9oZm9pbGVlR2hhaWRvaGZhaWNoYWVtOHNoYTRwaGVhbG9vNEVQdWFjZXppajFkaWVLZWV4Nm9vU2FoNnF1aWJpVm9oeDdpZWY3bGllNGlyb29zb29naGE2aWVYYWVsdTZ0ZWl2aWVzaDJ1cXVhaU1haHc3VmllY2Vlc2hvb2c5aWVmNGFlWGllZmVpNGFlaDlhZWNoZWlxdW9vczRjYWVHaGVlbmdlZW5nZWVnaGFldDdBaHF1OXJvaHMxY2VlMmNob2F4dWoyY2hvejJvb2NvbzVhZWd1YWNpZXBv","email":"student@example.com"},"registry.redhat.io":{"auth":"MzQ1NjcyM3x1aGMtcGhhNWFld2lvUGg3TG9vcmU5amVpdG9oNm9oOmV5SmhiR2NpT2lKU1V6VXhNaUo5LmV5SnpkV0lpT2lJMVpEVTROVEl5TkdGaFlXUTBNV0l3T1dJeU1qVTFNamhtWXpKbVlqbGpNU0o5LnVXb2hvaEQzbm9veGlldzZiYTR1Q2hlZXRodTdzaHUyZWVQaDBob28xY2FpUjBlZW0wZWlTaDNnYWVMaThDaGFlOWFldzdkZWl5ZWlnM2lldmllYm9oUHV5MGJpZWwzZGFpcmVpMm9TaDBlaXNoYWgxb3RoZW92b29naDhmb290aGE1a3VvcXVvM1Rob280cGU5VXN1d2VlbjVlaWxpa2VleTBlaWI0a2VpY2FpTmc1YXBpZWRhaXRlZWZpZThtdW8yZWVmdThlZXF1MXllaXJvYTFiYWkyYm9vUnVwOWlQZXAwQVRpdWxhaHF1dTRCb3VTaGFoOU5haHh1YWJhaFM0ZWVzaGFpM1R1OGFleDBsZWk5bW9vbmFpaGFlV2k3a2VlYmk3YXNoZTBxdWFoamllMHpvaHRoaXY0dmVpNG9qYXhvaHlhaVNoZXVzM2lvZ2g0ZWlzaDFjaG9vNnZhaTJ1dVBpZXBodXVtYWVnaDhvaGZlZWdhMW9pNWFlU29vNXNodVBob2gxdHVlcXVhaWphN2FuYWU2ZWRlbml0aGEydW5vTmdvb2NoZWk3U2hhZXNhdmFldGhlZXRob2h6OWVlbm9vNG9naGFlcGg3bm9oZm9pbGVlR2hhaWRvaGZhaWNoYWVtOHNoYTRwaGVhbG9vNEVQdWFjZXppajFkaWVLZWV4Nm9vU2FoNnF1aWJpVm9oeDdpZWY3bGllNGlyb29zb29naGE2aWVYYWVsdTZ0ZWl2aWVzaDJ1cXVhaU1haHc3VmllY2Vlc2hvb2c5aWVmNGFlWGllZmVpNGFlaDlhZWNoZWlxdW9vczRjYWVHaGVlbmdlZW5nZWVnaGFldDdBaHF1OXJvaHMxY2VlMmNob2F4dWoyY2hvejJvb2NvbzVhZWd1YWNpZXBv","email":"student@example.com"}}}'
+...
