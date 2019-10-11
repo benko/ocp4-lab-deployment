@@ -1,0 +1,54 @@
+{#
+# Kickstart installation file template for RHEL8 VMs.
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/performing_an_advanced_rhel_installation/index
+#}
+clearpart --all --initlabel --drives=vda
+ignoredisk --only-use=vda
+autopart --type=lvm
+text
+cdrom
+lang en_US.UTF-8
+keyboard --vckeymap=us --xlayouts='us'
+repo --name="AppStream" --baseurl=file:///run/install/repo/AppStream
+bootloader --location=mbr
+poweroff
+
+timezone {{ current_vm_tz }} --isUtc --nontp
+services --disabled="chronyd"
+
+eula --agreed
+firstboot --disabled
+
+skipx
+
+network  --bootproto=static --device=link --gateway={{ current_vm_gw }} --ip={{ current_vm_ipaddr }} --nameserver={{ current_vm_dns }} --netmask={{ current_vm_netmask }} --ipv6=auto --activate
+network  --hostname={{ current_vm_hostname }}
+
+rootpw --iscrypted {{ rhel_root_password }}
+user --groups=wheel --name={{ auth_user_username }} --password={{ auth_user_password }} --iscrypted --gecos="{{ auth_user_fullname }}"
+
+sshkey --username=root "{{ auth_user_publickey }}"
+sshkey --username={{ auth_user_username }} "{{ auth_user_publickey }}"
+
+%packages
+@^server-product-environment
+kexec-tools
+
+%end
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
+
+%post
+sed -i 's/^%wheel.*/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
+sync
+sync
+sync
+%end
