@@ -85,6 +85,8 @@ Nexus repositories and include that in your future deployments.
 
 ## Configuration
 
+### Control Node Configuration
+
 Using Ansible obviously implies some things: it is expected that your control
 node can communicate with, and authenticate against, any hosts you choose to
 involve in this, and that privilege escalation is configured correctly.
@@ -99,6 +101,17 @@ configuration settings.
 
 That being said, do not neglect to have a look at other var files - you may
 need to change bits and pieces here and there.
+
+### Virtualization Host Configuration
+
+This can go in any direction, really. Some basics:
+
+ - yes, *libvirt* is a requirement
+ - strongly advised, is a single bridge-based network
+ - for non-bridged networks, you will need an additional externally accessible
+   interface for the services VM, and a non-IP-managed private network for all
+   the VMs (including services) - see the service provisioning playbook for
+   more on configuration
 
 ## Additional Artifacts
 
