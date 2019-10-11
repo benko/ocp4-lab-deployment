@@ -2,8 +2,13 @@
 
 ## Abstract
 
-This document outlines a way of deploying OCP4 nightly builds in a minimal
-airgapped lab environment.
+This project describes (and implements) one way of deploying OCP4 nightly
+builds in a minimal airgapped lab environment.
+
+This is not an elaborate on how OpenShift works and how it should be
+administered and operated. There are other, much better references for that.
+
+See some links at the end of this document.
 
 ## Topology
 
@@ -36,6 +41,17 @@ Individual VM recommendations are as follows:
 
 Disk space is thin-provisioned, but defaults to 64GB per image.
 
+## Software Requirements
+
+This project uses Ansible to do most of its work, but obviously relies on some
+additional external dependencies.
+
+It was developed and initially tested on a macOS workstation acting as the
+Ansible control node, but subsequent deployments and testing were taking place
+on RHEL7, RHEL8, and even CentOS systems, so you should be good to go.
+
+That being said, **the absolute minimum version of Ansible is 2.8**!
+
 ## Additional Artifacts
 
 There are a couple of playbooks that can also be used to configure underlying
@@ -43,6 +59,10 @@ host systems, but these are stashed away and most certainly not maintained to
 the degree of the rest of this project.
 
 ***USE HOST CONFIGURATION PLAYBOOKS AT YOUR OWN RISK! YOU GET TO KEEP THE PIECES!***
+
+## Links & References
+
+TBD.
 
 ## Copyright, Copying & License
 
