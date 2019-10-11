@@ -91,15 +91,15 @@ Using Ansible obviously implies some things: it is expected that your control
 node can communicate with, and authenticate against, any hosts you choose to
 involve in this, and that privilege escalation is configured correctly.
 
-The ``ansible.cfg`` files will probably work well unmodified, but you
-definitely want to have a look at the ``hosts`` inventory and customise it for
-your needs and desires.
+The ``ansible.cfg`` file will probably work well unmodified, but you definitely
+want to have a look at the ``hosts`` inventory and customise it for your needs
+and desires.
 
-You *most definitely* want to have a look at the ``group_vars`` directory,
+You *most definitely* also want to have a look at the ``group_vars`` directory,
 especially the ``all.yml`` file, because it contains all the important
 configuration settings.
 
-That being said, do not neglect to have a look at other var files - you may
+That being said, do not neglect to have a look at the other var files - you may
 need to change bits and pieces here and there.
 
 ### Virtualization Host Configuration
@@ -112,6 +112,27 @@ This can go in any direction, really. Some basics:
    interface for the services VM, and a non-IP-managed private network for all
    the VMs (including services) - see the service provisioning playbook for
    more on configuration
+
+### Runtime Configuration Variables
+
+There are some variables that can override specific behaviour of some of the
+playbooks. Here's a non-exhaustive list:
+
+ - ``force_hd_image_recreate=yes``
+
+    This will kill any existing disk image in VM provisioning playbooks and
+    force them to be recreated from scratch.
+
+ - ``vm_use_bridge``
+
+    Decides whether to use a bridged interface or one attached to a libvirt
+    network in the corresponding guest configuration. Obviously, you would want
+    to stick to the same setting in all VMs, but if you need to discriminate, I
+    suggest ``host_vars``, however ugly that is.
+
+    There are two settings that go along with that - ``vm_bridge_name`` and
+    ``vm_network_name``, but they are of course mutually exclusive. The former
+    is only used whn ``vm_use_bridge`` is on, and vice-versa.
 
 ## Additional Artifacts
 
