@@ -62,7 +62,7 @@ rhel8_server
 # playbooks. There is a full libvirt configuration procedure there, but it
 # unfortunately expects the system to be dedicated and freshly installed from
 # scratch.
-#[hypervisors]
+[hypervisors]
 host.example.com
 
 [rhel8_server]
