@@ -18,11 +18,10 @@ global
 defaults
     mode                    tcp
     log                     global
-    option                  httplog
+    option                  tcplog
     option                  dontlognull
     option                  http-server-close
     option                  redispatch
-    option forwardfor       except 127.0.0.0/8
     retries                 3
     timeout http-request    10s
     timeout queue           1m
@@ -40,7 +39,7 @@ frontend kube_api
 backend kube_api
     balance roundrobin
     option ssl-hello-chk
-{% if bootstrap_gone | default(false) %}
+{% if not (bootstrap_gone | default(false)) %}
     server bootstrap bootstrap.{{ cluster_name }}.{{ parent_domain }}:6443 check
 {% endif %}
     server master master.{{ cluster_name }}.{{ parent_domain }}:6443 check
@@ -52,7 +51,7 @@ frontend machine_config
 backend machine_config
     balance roundrobin
     option ssl-hello-chk
-{% if bootstrap_gone | default(false) %}
+{% if not (bootstrap_gone | default(false)) %}
     server bootstrap bootstrap.{{ cluster_name }}.{{ parent_domain }}:22623 check
 {% endif %}
     server master master.{{ cluster_name }}.{{ parent_domain }}:22623 check
@@ -69,6 +68,8 @@ backend router_https
 
 frontend router_http
     mode http
+    option httplog
+    option forwardfor except 127.0.0.0/8
     bind 0.0.0.0:81
     default_backend router_http
 
