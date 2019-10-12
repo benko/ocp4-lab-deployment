@@ -22,6 +22,8 @@
         group: root
         mode: 0644
       notify: (re)start haproxy
+      tags:
+        - kick_bootstrap
 
   handlers:
     - name: (re)start haproxy
@@ -29,4 +31,6 @@
         name: haproxy
         enabled: yes
         state: restarted
+      tags:
+        - kick_bootstrap
 ...
