@@ -149,6 +149,8 @@ and ``registry.redhat.io``. If your mirrored images are coming from somewhere
 else, you will need to add a new proxy repository to Nexus configuration (and
 modify the group repository on port 5000).
 
+TODO: add stuff about why binary_artifact_path and cluster_rtdata_path have to be relative.
+
 There are some other interesting variables that can override default behaviour
 of some of the playbooks. Here's a non-exhaustive list:
 
@@ -200,7 +202,7 @@ of some of the playbooks. Here's a non-exhaustive list:
     This will kill any existing disk image in VM provisioning playbooks and
     force them to be recreated from scratch.
 
-N.B.: add something about default gateway and why it needs to be broken.
+TODO: add something about default gateway and why it needs to be broken, but not with OpenVPN.
 
 ### Useful Tags
 
@@ -220,6 +222,21 @@ they simply save time. Such as:
     about the configuration of the service and any other bollocks. It does
     mean, however, that you need to eat your own DNS food. /etc/hosts FTW!
 
+ - ``nexus_restore``
+
+    If you already did a restore of the Nexus Repository Manager and you're
+    just re-running the services config playbook for some reason other than
+    firstboot, you might want to prevent it from restoring everything all over
+    again and skip any task bearing this tag.
+
+## Notes on OpenVPN
+
+The network configuration for cluster VMs has to change a bit with OpenVPN.
+After all, you want to be getting a response from the VMs, right? So they need
+to have the correct default gateway set.
+
+TODO: finish this.
+
 ## Additional Artifacts
 
 There are a couple of playbooks that can also be used to configure underlying
@@ -227,6 +244,24 @@ host systems, but these are stashed away and most certainly not maintained to
 the degree of the rest of this project.
 
 > ***USE HOST CONFIGURATION PLAYBOOKS AT YOUR OWN RISK! YOU GET TO KEEP THE PIECES!***
+
+## Other Nasty Bugs That Bite
+
+### Time Synchronisation Between Control Node and Hypervisors
+
+You read it correctly. Ignition files are created on the control node.
+Hypervisors, on the other hand, set the time for VMs. If the two do not match,
+bootstrap will have appeared to boot normally, but the other nodes will refuse
+to download their configuration from it, producing an error message like this
+on the console:
+
+    x509: certificate has expired or is not yet valid
+
+While I agree that the message could hardly be more ambiguous (maybe if it just
+said, "SUCCESS: certificate exists"?) this is not the matter of discussion
+here. Fix your time sync.
+
+https://access.redhat.com/solutions/4355651
 
 ## Links & References
 
