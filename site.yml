@@ -1,0 +1,12 @@
+---
+- import_playbook: 00-provision-vm-services.yml
+- import_playbook: 01-configure-vm-services.yml
+- import_playbook: 10-conf-generate-ignition.yml
+- import_playbook: 11-provision-vm-bootstrap.yml
+- import_playbook: 12-provision-vm-master.yml
+- import_playbook: 13-get-rid-of-bootstrap-vm.yml
+- import_playbook: 14-provision-vm-workers.yml
+- import_playbook: 15-approve-workers-when-ready.yml
+- import_playbook: 16-provision-cluster-storage.yml
+- import_playbook: 17-disable-telemetry.yml
+...
