@@ -11,7 +11,7 @@ $TTL 86400
 $ORIGIN {{ parent_domain | regex_replace('^[^.]*\.') }}.
 
 {{ parent_domain | regex_replace('\..*$') }} IN SOA {{ parent_domain }}. hostmaster.{{ parent_domain | regex_replace('^[^.]*\.') }}. (
-                                {{ '%Y%m%d%H%M%S' | strftime }}      ; Serial number (yyyymmddHHMMSS)
+                                {{ '%Y%m%d%H' | strftime }}      ; Serial number (yyyymmddHH)
                                 43200           ; Refresh       (12h, RFC 1912 REC)
                                 7200            ; Retry         (2h, RIPE-203 REC)
                                 1296000         ; Expire        (15d, RFC 1912 REC)
