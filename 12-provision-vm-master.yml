@@ -1,0 +1,57 @@
+---
+- import_playbook: includes/rhcos-preflight.yml
+  vars:
+    installer_target: master
+
+- name: provision the master vm
+  hosts: hypervisors
+  become: yes
+  gather_facts: no
+  vars:
+    current_vm_name: master
+  tasks:
+    - name: set some facts that describe the vm
+      set_fact:
+        current_vm_hostname: "{{ vms[current_vm_name].hostname }}"
+        current_vm_mac: "{{ vms[current_vm_name].mac }}"
+        current_vm_ipaddr: "{{ vms[current_vm_name].ipaddr }}"
+        current_vm_netmask: "{{ vms[current_vm_name].netmask | default(vms.global.netmask) }}"
+        current_vm_dns: "{{ vms[current_vm_name].dns | default(vms.global.dns) }}"
+        current_vm_gw: "{{ vms[current_vm_name].gw | default(vms.global.gw) }}"
+        current_vm_tz: "{{ vms[current_vm_name].tz | default(vms.global.tz) }}"
+        current_vm_mem_gb: "{{ vms[current_vm_name].mem_gb | default(vms.global.mem_gb) }}"
+        current_vm_ncpus: "{{ vms[current_vm_name].ncpus | default(vms.global.ncpus) }}"
+
+    - name: destroy and kill any existing VM
+      include_tasks: includes/destroy-and-kill-vm.yml
+
+    - name: remove and recreate the disk image
+      include_tasks: includes/remove-and-recreate-disk.yml
+
+    - name: create and boot the VM
+      include_tasks: includes/create-and-boot-vm.yml
+
+    - name: wait for the VM to come back after installation
+      delegate_to: localhost
+      become: no
+      wait_for:
+        host: "{{ current_vm_hostname }}"
+        port: 22
+        delay: 10
+        sleep: 10
+        timeout: 300
+        search_regex: OpenSSH
+        state: started
+
+    - name: make a nice progress report
+      debug:
+        msg: >
+          The master VM has now rebooted after installation and will try to
+          provision itself from the bootstrap node after another reboot. This
+          will take quite some time, so be patient.
+
+    - name: invoke wait-for bootstrap-complete
+      delegate_to: localhost
+      become: no
+      command: "{{ openshift_installer_path }} --dir={{ openshift_rtdata_path }} --log-level=debug wait-for bootstrap-complete"
+...

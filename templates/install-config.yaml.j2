@@ -1,0 +1,48 @@
+apiVersion: v1
+baseDomain: {{ parent_domain }}
+compute:
+- hyperthreading: Enabled
+  name: worker
+  platform: {}
+  replicas: 2
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  platform: {}
+  replicas: 1
+metadata:
+  name: {{ cluster_name }}
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  machineCIDR: 10.0.0.0/16
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+{% if x509_ca_cert is defined %}
+additionalTrustBundle: |
+{% for line in x509_ca_cert.stdout_lines %}
+  {{ line }}
+{% endfor %}
+{% endif %}
+imageContentSources:
+  - source: quay.io/{{ ocp_release_image }}
+    mirrors:
+      - registry.{{ parent_domain }}:5000/{{ ocp_release_image }}
+  - source: quay.io/{{ ocp_worker_image }}
+    mirrors:
+      - registry.{{ parent_domain }}:5000/{{ ocp_worker_image }}
+{% if additional_content_sources is defined %}
+{% for mirror in additional_content_sources %}
+  - source: {{ mirror.registry_host }}/{{ mirror.image_basename }}
+    mirrors:
+      - registry.{{ parent_domain }}:5000/{{ mirror.image_basename }}
+{% endfor %}
+{% endif %}
+pullSecret: |
+  {{ auth_user_pullsecret }}
+sshKey: |
+  {{ auth_user_publickey }}

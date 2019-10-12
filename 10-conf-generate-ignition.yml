@@ -1,0 +1,52 @@
+---
+- name: generate ignition configs based on install-config.yaml
+  hosts: localhost
+  become: no
+  tasks:
+    - name: warn about destruction
+      pause:
+        prompt: |
+          WARNING! The following tasks will destroy existing cluster metadata in cluster/!
+          Press Ctrl-C within the next 10 seconds to stop this play and save yourself!
+        seconds: 10
+
+    - name: send existing data into oblivion
+      file:
+        path: "{{ openshift_rtdata_path }}"
+        state: absent
+
+    - name: recreate cluster state directory
+      file:
+        path: "{{ openshift_rtdata_path }}"
+        state: directory
+        mode: 0755
+
+    - name: read in the CA cert
+      delegate_to: "{{ vms['services'].hostname }}"
+      command: cat {{ x509_ca_location }}/ca.crt
+      register: x509_ca_cert
+
+    - name: process installer template
+      template:
+        src: templates/install-config.yaml.j2
+        dest: cluster/install-config.yaml
+
+    - name: generate ignition configs
+      command: "{{ openshift_installer_path }} create ignition-configs --dir={{ openshift_rtdata_path }}"
+
+- name: publish ignition configs
+  hosts: services
+  become: yes
+  tasks:
+    - name: publish all the ignition configs on web server
+      copy:
+        src: "{{ openshift_rtdata_path }}{{ item }}"
+        dest: /var/www/html/{{ item }}
+        owner: apache
+        group: apache
+        mode: 0644
+      loop:
+        - bootstrap.ign
+        - master.ign
+        - worker.ign
+...

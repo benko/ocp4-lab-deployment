@@ -1,0 +1,7 @@
+DEFAULT coreinstall
+TIMEOUT 5
+PROMPT 5
+LABEL coreinstall
+    KERNEL rhcos-{{ coreos_release }}-installer-kernel
+    APPEND initrd=rhcos-{{ coreos_release }}-installer-initramfs.img ip=dhcp rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://{{ vms['services'].hostname }}/rhcos-{{ coreos_release }}-metal-bios.raw.gz coreos.inst.ignition_url=http://{{ vms['services'].hostname }}/{{ installer_target }}.ign
+IPAPPEND 2

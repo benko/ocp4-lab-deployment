@@ -1,0 +1,32 @@
+---
+- name: kill the bootstrap vm
+  hosts: hypervisors
+  become: yes
+  tasks:
+    - name: destroy and kill any existing VM
+      include_tasks: includes/destroy-and-kill-vm.yml
+      vars:
+        current_vm_name: bootstrap
+
+- name: reconfigure haproxy to exclude bootstrap
+  hosts: services
+  become: yes
+  tasks:
+    - name: recreate haproxy.cfg
+      vars:
+        bootstrap_gone: yes
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start haproxy
+
+  handlers:
+    - name: (re)start haproxy
+      service:
+        name: haproxy
+        enabled: yes
+        state: restarted
+...
