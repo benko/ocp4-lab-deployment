@@ -1,0 +1,28 @@
+---
+# NOTE: ALWAYS USE A DYNAMIC INCLUDE FOR THIS FILE! (i.e. include_tasks)
+#       IT WILL FAIL MISERABLY IF YOU TRY TO import_tasks WITH IT.
+#
+# This basically just powers off and undefines a VM if it's found in the list
+# of VMs on the host.
+#
+# It depends on the var called current_vm_name which should be set by the
+# master play to do other things anyway, so no woes here.
+- name: get a list of vms
+  virt:
+    command: list_vms
+  register: vm_list
+
+- name: power off the vm if it's there
+  virt:
+    name: "{{ current_vm_name }}"
+    state: destroyed
+  when:
+    - "current_vm_name in vm_list.list_vms"
+
+- name: undefine the vm if it's there
+  virt:
+    command: undefine
+    name: "{{ current_vm_name }}"
+  when:
+    - "current_vm_name in vm_list.list_vms"
+...

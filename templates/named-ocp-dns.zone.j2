@@ -1,0 +1,53 @@
+{#
+# Two observations here:
+#   - etcd-0 is *not* a CNAME for some reason
+#   - the wildcard domain points directly to a RRSET workers, rather than the
+#     load balancer; it is a lab set up after all, if one wanted real HA they
+#     would have gone for something more sizable (easy enough to switch here
+#     though - just replace the CNAME at the end; however, that will complicate
+#     your life down the road when it gets to haproxy coexisting with apache)
+#}
+$TTL 86400
+$ORIGIN {{ parent_domain | regex_replace('^[^.]*\.') }}.
+
+{{ parent_domain | regex_replace('\..*$') }} IN SOA {{ parent_domain }}. hostmaster.{{ parent_domain | regex_replace('^[^.]*\.') }}. (
+                                2019101010      ; Serial number (yyyymmddxx)
+                                43200           ; Refresh       (12h, RFC 1912 REC)
+                                7200            ; Retry         (2h, RIPE-203 REC)
+                                1296000         ; Expire        (15d, RFC 1912 REC)
+                                172800          ; Minimum TTL   (2d, RIPE-203 REC)
+                )       ; Start Of Authority defined
+
+                IN      NS                      services.{{ parent_domain }}.
+
+; Start of authoritative data - host definitions
+$ORIGIN {{ parent_domain }}.
+
+services        IN      A                       {{ vms['services'].ipaddr }}
+registry        IN      CNAME                   services
+
+$ORIGIN {{ cluster_name }}.{{ parent_domain }}.
+
+bootstrap       IN      A                       {{ vms['bootstrap'].ipaddr }}
+
+master          IN      A                       {{ vms['master'].ipaddr }}
+etcd-0          IN      A                       {{ vms['master'].ipaddr }}
+
+worker1         IN      A                       {{ vms['worker1'].ipaddr }}
+worker2         IN      A                       {{ vms['worker2'].ipaddr }}
+
+workers         IN      A                       {{ vms['worker1'].ipaddr }}
+workers         IN      A                       {{ vms['worker2'].ipaddr }}
+
+api             IN      CNAME                   services.{{ parent_domain }}.
+api-int         IN      CNAME                   services.{{ parent_domain }}.
+
+
+$ORIGIN _tcp.{{ cluster_name }}.{{ parent_domain }}.
+
+_etcd-server-ssl IN     SRV 0 10 2380           etcd-0.{{ cluster_name }}.{{ parent_domain }}.
+
+$ORIGIN apps.{{ cluster_name }}.{{ parent_domain }}.
+
+*               IN      CNAME                   workers.{{ cluster_name }}.{{ parent_domain }}.
+

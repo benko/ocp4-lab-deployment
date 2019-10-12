@@ -1,0 +1,26 @@
+---
+# NOTE: THIS PLAYBOOK IS COMPLETELY UNSUPPORTED! IT WORKED FOR ME WHEN
+# DEPLOYING HOSTS FROM SCRATCH, BUT IT MAY BLOW UP YOUR KITCHEN, HURT YOUR
+# PET(s), PUNCTURE YOUR CAR TYRE, OR POISON YOUR CHILDREN WITH FOOD. NOT LEAST,
+# IT MIGHT SEVERELY SCREW UP THE SYSTEM(s) YOU ARE TRYING TO RUN IT AGAINST.
+#
+# YOU GET TO KEEP THE PIECES WHEN THAT HAPPENS. DON'T COME CRYING.
+
+- name: bounce bridge device and its slave
+  hosts: hypervisors
+  become: yes
+  tasks:
+    - name: figure out what the bridge slave is
+      set_fact:
+        libvirt_ocp_bridge_device: "{{ item }}"
+      loop: "{{ ansible_interfaces }}"
+      when:
+        - item | regex_search('^(enp|eno|eth)')
+        - vars['ansible_' ~ item]['active']
+
+    - name: bounce interfaces
+      shell: /usr/sbin/ifdown {{ item }} ; /usr/sbin/ifup {{ item }}
+      loop:
+        - ocpbr0
+        - "{{ libvirt_ocp_bridge_device }}"
+...

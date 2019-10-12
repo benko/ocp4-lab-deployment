@@ -21,7 +21,13 @@ firstboot --disabled
 
 skipx
 
+{% if current_vm_name == 'services' and (vm_svc_add_interface | default(false)) %}
+network  --bootproto=static --device=ens3 --ip={{ current_vm_ipaddr }} --netmask={{ current_vm_netmask }} --ipv6=auto --activate
+network  --bootproto=static --device=ens4 --gateway={{ current_vm_gw }} --ip={{ vm_svc_add_ipaddr }} --nameserver={{ current_vm_dns }} --netmask={{ vm_svc_add_netmask }} --ipv6=auto --activate
+{% else %}
 network  --bootproto=static --device=link --gateway={{ current_vm_gw }} --ip={{ current_vm_ipaddr }} --nameserver={{ current_vm_dns }} --netmask={{ current_vm_netmask }} --ipv6=auto --activate
+{% endif %}
+
 network  --hostname={{ current_vm_hostname }}
 
 rootpw --iscrypted {{ rhel_root_password }}

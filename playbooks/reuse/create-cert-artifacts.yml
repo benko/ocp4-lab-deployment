@@ -1,0 +1,103 @@
+---
+# NOTE: ALWAYS USE A DYNAMIC INCLUDE FOR THIS FILE! (i.e. include_tasks)
+#       IT WILL FAIL MISERABLY IF YOU TRY TO import_tasks WITH IT.
+#
+# These tasks create all required certificate artifacts (a key, a CSR, and a certificate).
+# They do, however, need some parameters (i.e. task variables) to work:
+#  - x509_ca_location
+#  - x509_ca_pass
+#     these should be set on the global scope anyway
+#
+#  - cert_service_name
+#     affects the names of generated files
+#  - cert_common_name
+#     the common name to be used for the cert
+#
+- name: "[{{ cert_service_name }}]: check that there is a cert in place"
+  file:
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.crt"
+    state: file
+  ignore_errors: yes
+  register: cert_exists
+
+- name: "[{{ cert_service_name }}]: check if there is a key then"
+  file:
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.key"
+    state: file
+  ignore_errors: yes
+  register: key_exists
+  when: cert_exists.failed
+
+- name: "[{{ cert_service_name }}]: check that the cert matches our expectations"
+  openssl_certificate:
+    provider: assertonly
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.crt"
+    subject:
+      CN: "{{ cert_common_name }}"
+    valid_in: "+1095d"
+  ignore_errors: yes
+  register: cert_valid
+  when: not cert_exists.failed
+
+- name: "[{{ cert_service_name }}]: create a new private key"
+  openssl_privatekey:
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.key"
+    #cipher: AES-256-CBC
+    size: 2048
+    state: present
+    owner: root
+    group: root
+    mode: 0600
+  when:
+    - cert_exists.failed
+    - key_exists.failed
+
+- name: "[{{ cert_service_name }}]: kill the CSR and cert if validation failed"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ x509_ca_location }}/{{ cert_service_name }}.csr"
+    - "{{ x509_ca_location }}/{{ cert_service_name }}.crt"
+  when: cert_valid.failed | default(true)
+
+- name: "[{{ cert_service_name }}]: create a new CSR"
+  openssl_csr:
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.csr"
+    privatekey_path: "{{ x509_ca_location }}/{{ cert_service_name }}.key"
+    common_name: "{{ cert_common_name }}"
+    organization_name: Red Hat
+    organizational_unit_name: GLS
+    locality_name: Europe
+    country_name: EU
+    email_address: training@europe.redhat.com
+    key_usage:
+      - nonRepudiation
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: no
+    basic_constraints:
+      - "CA:FALSE"
+    basic_constraints_critical: no
+    state: present
+    owner: root
+    group: root
+    mode: 0600
+  when: cert_exists.failed or cert_valid.failed
+
+- name: "[{{ cert_service_name }}]: create a new certificate"
+  openssl_certificate:
+    provider: ownca
+    ownca_not_after: "{{ x509_validity_until }}"
+    ownca_path: "{{ x509_ca_location }}/ca.crt"
+    ownca_privatekey_path: "{{ x509_ca_location }}/ca.key"
+    ownca_privatekey_passphrase: "{{ x509_ca_pass }}"
+    csr_path: "{{ x509_ca_location }}/{{ cert_service_name }}.csr"
+    path: "{{ x509_ca_location }}/{{ cert_service_name }}.crt"
+    privatekey_path: "{{ x509_ca_location }}/{{ cert_service_name }}.key"
+    state: present
+    owner: root
+    group: root
+    mode: 0644
+  when: cert_exists.failed or cert_valid.failed
+...

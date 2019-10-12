@@ -4,19 +4,10 @@
   hosts: services
   become: yes
   tasks:
-    - name: wait for vm to finish installing
-      delegate_to: localhost
-      become: no
-      wait_for:
-        host: "{{ inventory_hostname }}"
-        port: 22
-        sleep: 10
-        timeout: 300
-        search_regex: OpenSSH
-        state: started
-
     - name: register and subscribe a system
       include_tasks: playbooks/reuse/subscribe-and-update.yml
+      tags:
+        - rhsm
 
     - name: install packages
       package:
@@ -141,6 +132,8 @@
         cert_service_name: openvpn
         cert_common_name: "{{ vms['services'].hostname }}"
       include_tasks: playbooks/reuse/create-cert-artifacts.yml
+      tags:
+        - openvpn
 
     - name: generate registry certs
       vars:
@@ -161,7 +154,7 @@
 
     - name: copy openvpn packages somewhere
       copy:
-        src: "{{ item }}"
+        src: "{{ binary_artifact_path }}/{{ item }}"
         dest: /tmp
         owner: root
         group: root
@@ -186,7 +179,7 @@
 
     - name: get rid of the rpm files
       file:
-        path: "{{ item }}"
+        path: "/tmp/{{ item }}"
         state: absent
       loop:
         - openvpn-{{ openvpn_release }}.el8.x86_64.rpm
@@ -195,9 +188,91 @@
       tags:
         - openvpn
 
-      # TODO: configure service
-      # TODO: open ports
-      # TODO: (re)start openvpn
+    - name: make sure we have somewhere to put the certs
+      file:
+        path: /etc/openvpn/certs
+        state: directory
+        owner: openvpn
+        group: openvpn
+        mode: 0755
+      tags:
+        - openvpn
+
+    - name: publish the ca cert for ovpn
+      copy:
+        src: "{{ x509_ca_location }}/ca.crt"
+        dest: /etc/openvpn/certs/ca.crt
+        remote_src: yes
+        owner: openvpn
+        group: openvpn
+        mode: 0644
+      notify: (re)start the openvpn server
+      tags:
+        - openvpn
+
+    - name: publish the ovpn cert
+      copy:
+        src: "{{ x509_ca_location }}/openvpn.crt"
+        dest: /etc/openvpn/certs/cluster.crt
+        remote_src: yes
+        owner: openvpn
+        group: openvpn
+        mode: 0644
+      notify: (re)start the openvpn server
+      tags:
+        - openvpn
+
+    - name: publish the ovpn key
+      copy:
+        src: "{{ x509_ca_location }}/openvpn.key"
+        dest: /etc/openvpn/certs/cluster.key
+        remote_src: yes
+        owner: openvpn
+        group: openvpn
+        mode: 0600
+      notify: (re)start the openvpn server
+      tags:
+        - openvpn
+
+    - name: create DH params file
+      command: openssl dhparam -out /etc/openvpn/certs/dh.pem 2048
+      args:
+        creates: /etc/openvpn/certs/dh.pem
+      when: ovpn_enforce_dhparam
+      notify: (re)start the openvpn server
+      tags:
+        - openvpn
+
+    - name: fix dhparam ownership etc
+      file:
+        path: /etc/openvpn/certs/dh.pem
+        state: file
+        owner: openvpn
+        group: openvpn
+        mode: 0600
+      when: ovpn_enforce_dhparam
+      tags:
+        - openvpn
+
+    - name: configure openvpn
+      template:
+        src: templates/openvpn-server.conf.j2
+        dest: /etc/openvpn/server/cluster.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the openvpn server
+      tags:
+        - openvpn
+
+    - name: make sure the firewall accepts openvpn
+      firewalld:
+        service: openvpn
+        state: enabled
+        immediate: yes
+        permanent: yes
+      tags:
+        - openvpn
 
     # dns server configuration
     - name: configure named
@@ -230,7 +305,7 @@
 
     - name: publish zone
       template:
-        src: templates/ocp-dns.zone.j2
+        src: templates/named-ocp-dns.zone.j2
         dest: /var/named/chroot/var/named/{{ parent_domain }}.zone
         owner: root
         group: named
@@ -247,27 +322,25 @@
         mode: 0644
       notify: (re)start the web server
 
-    - name: configure default vhost
-      template:
-        src: templates/vhost.conf.j2
-        dest: /etc/httpd/conf.d/00_default.conf
-        owner: root
-        group: root
-        mode: 0644
-      notify: (re)start the web server
-
     - name: configure proxy catch-all vhost
       vars:
         create_proxy_config: yes
       template:
         src: templates/vhost.conf.j2
-        dest: /etc/httpd/conf.d/99_proxy_all.conf
+        dest: /etc/httpd/conf.d/00_proxy_all.conf
         owner: root
         group: root
         mode: 0644
       notify: (re)start the web server
 
-    # TODO: publish artifacts here?
+    - name: configure the services vhost
+      template:
+        src: templates/vhost.conf.j2
+        dest: /etc/httpd/conf.d/99_services.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start the web server
 
     - name: make sure the firewall accepts http
       firewalld:
@@ -275,6 +348,12 @@
         state: enabled
         immediate: yes
         permanent: yes
+
+    - name: httpd needs some seboolean love to connect to haproxy
+      seboolean:
+        name: httpd_can_network_connect
+        state: true
+        persistent: yes
 
     # haproxy configuration
     - name: configure haproxy
@@ -304,12 +383,11 @@
         - 6443
         - 22623
 
-    - name: haproxy needs some seboolean love
+    - name: haproxy needs some seboolean love to connect to backends
       seboolean:
         name: haproxy_connect_any
         state: true
         persistent: yes
-      notify: (re)start haproxy
 
     # dhcp server configuration
     - name: configure dhcp server
@@ -351,7 +429,9 @@
         - pxelinux.0
         - ldlinux.c32
 
-    - name: create pxelinux.cfg
+    # NOTE: Individual machine boot configs are created in their respective
+    #       provisioning playbooks.
+    - name: create the pxelinux.cfg directory
       file:
         path: /var/lib/tftpboot/pxelinux.cfg
         state: directory
@@ -369,7 +449,7 @@
 
     - name: extract the nexus archive
       unarchive:
-        src: files/nexus-{{ nexus_release }}-unix.tar.gz
+        src: "{{ binary_artifact_path }}/nexus-{{ nexus_release }}-unix.tar.gz"
         dest: /opt
         owner: root
         group: root
@@ -438,27 +518,60 @@
         state: present
       notify: (re)start nexus
 
+    - name: check if there are any backups to speak of - DB check
+      delegate_to: localhost
+      file:
+        path: "{{ binary_artifact_path }}/nexus-db-backup.tar.gz"
+        state: file
+      ignore_errors: yes
+      register: db_backup_is_there
+
+    - name: check if there are any backups to speak of - blob check
+      delegate_to: localhost
+      file:
+        path: "{{ binary_artifact_path }}/nexus-blob-backup.tar.gz"
+        state: file
+      ignore_errors: yes
+      register: blob_backup_is_there
+
+    - name: reason over results just above
+      assert:
+        fail_msg: |
+          WARNING: Nexus backup is NOT present on the control node. Skipping restore.
+          You will have to run the first cluster installation with internet access in
+          order to seed the Nexus repository.
+        success_msg: |
+          GOOD: Nexus backup found on the control node. Will do a restore next.
+        that:
+          - db_backup_is_there.failed is undefined
+          - blob_backup_is_there.failed is undefined
+      ignore_errors: yes
+      register: to_do_or_not_to_do
+
     # TODO: recreate backups without registry authentication options!
     # https://support.sonatype.com/hc/en-us/articles/115013153887-Docker-Repository-Configuration-and-Client-Connection
     - name: make sure we have somewhere to put the backups
       file:
         path: /opt/sonatype-work/nexus3/restore-from-backup
         state: directory
+      when: to_do_or_not_to_do.evaluated_to is undefined
 
     - name: put the config backups where they belong
       unarchive:
-        src: files/nexus-db-backup.tar.gz
+        src: "{{ binary_artifact_path }}/nexus-db-backup.tar.gz"
         dest: /opt/sonatype-work/nexus3/restore-from-backup
         owner: root
         group: root
+      when: to_do_or_not_to_do.evaluated_to is undefined
       notify: (re)start nexus
 
     - name: extract the nexus blob backups
       unarchive:
-        src: files/nexus-blob-backup.tar.gz
+        src: "{{ binary_artifact_path }}/nexus-blob-backup.tar.gz"
         dest: /opt/sonatype-work/nexus3
         owner: root
         group: root
+      when: to_do_or_not_to_do.evaluated_to is undefined
       notify: (re)start nexus
 
     - name: add nexus.service for systemd
@@ -524,6 +637,12 @@
 
   # the heavy duty handlers :)
   handlers:
+    - name: (re)start the openvpn server
+      service:
+        name: openvpn-server@cluster
+        enabled: yes
+        state: restarted
+
     - name: (re)start the dns server
       service:
         name: named-chroot
@@ -555,7 +674,7 @@
         state: restarted
 
 - name: fix some local config stuffs after the handlers
-  hosts: services.ocp4.p0f.local
+  hosts: services
   become: yes
   tasks:
     - name: check that named is running and operational

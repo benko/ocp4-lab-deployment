@@ -1,0 +1,81 @@
+#
+# A minimalist httpd.conf for the services VM.
+#
+ServerRoot "/etc/httpd"
+
+Listen 80
+
+Include conf.modules.d/*.conf
+
+User apache
+Group apache
+
+ServerAdmin root@{{ inventory_hostname }}
+
+<Directory />
+    AllowOverride none
+    Require all denied
+</Directory>
+
+<Files ".ht*">
+    Require all denied
+</Files>
+
+ErrorLog "logs/master-error.log"
+LogLevel warn
+
+<IfModule log_config_module>
+    LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+    LogFormat "%h %l %u %t \"%r\" %>s %b" common
+
+    <IfModule logio_module>
+      LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %I %O" combinedio
+    </IfModule>
+
+    #CustomLog "logs/access_log" common
+    #CustomLog "logs/access_log" combined
+</IfModule>
+
+<IfModule alias_module>
+    # Redirect permanent /foo http://www.example.com/bar
+    # Alias /webpath /full/filesystem/path
+    ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
+</IfModule>
+
+<Directory "/var/www/cgi-bin">
+    AllowOverride None
+    Options None
+    Require all granted
+</Directory>
+
+AddDefaultCharset UTF-8
+
+<IfModule mime_module>
+    TypesConfig /etc/mime.types
+
+    AddType application/x-compress .Z
+    AddType application/x-gzip .gz .tgz
+    #AddHandler cgi-script .cgi
+    #AddHandler type-map var
+    AddType text/html .shtml
+    AddOutputFilter INCLUDES .shtml
+</IfModule>
+
+<IfModule mime_magic_module>
+    #
+    # The mod_mime_magic module allows the server to use various hints from the
+    # contents of the file itself to determine its type.  The MIMEMagicFile
+    # directive tells the module where the hint definitions are located.
+    #
+    MIMEMagicFile conf/magic
+</IfModule>
+
+#ErrorDocument 500 "The server made a boo boo."
+#ErrorDocument 404 /missing.html
+#ErrorDocument 404 "/cgi-bin/missing_handler.pl"
+#ErrorDocument 402 http://www.example.com/subscription_info.html
+
+#EnableMMAP off
+EnableSendfile on
+
+IncludeOptional conf.d/*.conf

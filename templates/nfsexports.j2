@@ -1,0 +1,3 @@
+{% for export in nfs_exports %}
+{{ nfs_parent }}/{{ export.name }} *(rw,all_squash)
+{% endfor %}

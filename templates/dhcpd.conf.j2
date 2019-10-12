@@ -1,0 +1,52 @@
+authoritative;
+
+log-facility local7;
+
+subnet {{ ip_prefix }}.0 netmask {{ vms['global'].netmask }} {
+    range {{ ip_prefix }}.200 {{ ip_prefix }}.220;
+
+    # NOTE: If configured properly, this effectively makes it impossible for
+    #	    cluster hosts to reach outside their network. Go back to README.md
+    #	    for an explanation of this. Also, read all.yml section defining the
+    #	    VM catalog.
+    option routers {{ vms['global'].gw }};
+
+    option subnet-mask {{ vms['global'].netmask }};
+    option domain-name "{{ parent_domain }}";
+    option domain-name-servers {{ vms['global'].dns }};
+
+    default-lease-time 3600;
+    max-lease-time 86400;
+
+    next-server {{ vms['services'].ipaddr }};
+    filename "pxelinux.0";
+}
+
+host bootstrap {
+    hardware ethernet {{ vms['bootstrap'].mac }};
+    option domain-name "{{ cluster_name }}.{{ parent_domain }}";
+    option host-name "{{ vms['bootstrap'].hostname }}";
+    fixed-address bootstrap.{{ cluster_name }}.{{ parent_domain }};
+}
+
+host master {
+    hardware ethernet {{ vms['master'].mac }};
+    option domain-name "{{ cluster_name }}.{{ parent_domain }}";
+    option host-name "{{ vms['master'].hostname }}";
+    fixed-address master.{{ cluster_name }}.{{ parent_domain }};
+}
+
+host worker1 {
+    hardware ethernet {{ vms['worker1'].mac }};
+    option domain-name "{{ cluster_name }}.{{ parent_domain }}";
+    option host-name "{{ vms['worker1'].hostname }}";
+    fixed-address worker1.{{ cluster_name }}.{{ parent_domain }};
+}
+
+host worker2 {
+    hardware ethernet {{ vms['worker2'].mac }};
+    option domain-name "{{ cluster_name }}.{{ parent_domain }}";
+    option host-name "{{ vms['worker2'].hostname }}";
+    fixed-address worker2.{{ cluster_name }}.{{ parent_domain }};
+}
+

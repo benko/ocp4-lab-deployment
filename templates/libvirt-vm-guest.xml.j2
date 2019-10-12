@@ -6,9 +6,14 @@
 #   - current_vm_firstboot activates a floppy and cdrom, and boots from the latter
 #   - current_vm_netboot activates PXE in a safe way (to prevent endless loops)
 #   - current_vm_directboot is for RHCOS only and sets kernel boot files and options
+#   - vm_use_bridge=yes will create a bridged interface (expects vm_bridge_name)
+#   - vm_use_bridge=no will create a network-attached interface (exp vm_network_name)
 #
-# TODO: add second network interface and virt net configuration.
+# If VM name is 'services', then vm_svc_add_interface=yes will configure an
+# additional interface and attach it to a bridge called vm_svc_add_bridge_name
+# with a MAC address of vm_svc_add_macaddr.
 #
+# TODO: how to assign an IP to the secondary iface?
 #}
 <domain type='kvm'>
   <name>{{ current_vm_name }}</name>
@@ -89,6 +94,13 @@
     <interface type='network'>
       <mac address='{{ current_vm_mac }}'/>
       <source network='{{ vm_network_name }}'/>
+      <model type='virtio'/>
+    </interface>
+{% endif %}
+{% if current_vm_name == 'services' and (vm_svc_add_interface | default(false)) %}
+    <interface type='bridge'>
+      <mac address='{{ vm_svc_add_macaddr }}'/>
+      <source bridge='{{ vm_svc_add_bridge_name }}'/>
       <model type='virtio'/>
     </interface>
 {% endif %}

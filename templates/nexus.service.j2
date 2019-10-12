@@ -1,0 +1,17 @@
+[Unit]
+Description=Sonatype Nexus3 Server
+#Wants=
+After=network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+Environment=LANG=C
+
+ExecStart=/opt/nexus-{{ nexus_release }}/bin/nexus start
+ExecReload=/opt/nexus-{{ nexus_release }}/bin/nexus force-reload
+ExecStop=/opt/nexus-{{ nexus_release }}/bin/nexus stop
+KillMode=mixed
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,182 @@
+---
+# The hard disk image will be scratched if force_hd_image_recreate=yes.
+# Do note that his may not be necessary as it will happen automatically if the
+# kickstart file was recreated (or changed) for any reason.
+- name: provision the services VM
+  hosts: hypervisors
+  become: yes
+  gather_facts: no
+  vars:
+    current_vm_name: services
+  tasks:
+    - name: set some facts that describe the vm
+      set_fact:
+        current_vm_hostname: "{{ vms[current_vm_name].hostname }}"
+        current_vm_mac: "{{ vms[current_vm_name].mac }}"
+        current_vm_ipaddr: "{{ vms[current_vm_name].ipaddr }}"
+        current_vm_netmask: "{{ vms[current_vm_name].netmask | default(vms.global.netmask) }}"
+        current_vm_dns: "{{ vms[current_vm_name].dns | default(vms.global.dns) }}"
+        current_vm_gw: "{{ vms[current_vm_name].gw | default(vms.global.gw) }}"
+        current_vm_tz: "{{ vms[current_vm_name].tz | default(vms.global.tz) }}"
+        current_vm_mem_gb: "{{ vms[current_vm_name].mem_gb | default(vms.global.mem_gb) }}"
+        current_vm_ncpus: "{{ vms[current_vm_name].ncpus | default(vms.global.ncpus) }}"
+
+    - name: make sure the rhel8 iso is on the host
+      copy:
+        src: "{{ binary_artifact_path }}/{{ item }}"
+        dest: /var/lib/libvirt/images/{{ item }}
+        owner: root
+        group: qemu
+        mode: 0644
+      loop: "{{ rhel8_artifacts }}"
+
+    - name: destroy and kill any existing VM if so requested
+      include_tasks: playbooks/reuse/destroy-and-kill-vm.yml
+      when: force_hd_image_recreate | default(false)
+
+    - name: kill the hard disk image (if so requested)
+      file:
+        path: /var/lib/libvirt/images/{{ current_vm_name }}-vda.qcow2
+        state: absent
+      when: force_hd_image_recreate | default(false)
+
+    # This is completely VM-specific and arbitrary. Who says 0 is disk and 1 is floppy?
+    - name: check if the disk image exists already
+      file:
+        path: /var/lib/libvirt/images/{{ item }}
+        state: file
+      loop:
+        - "{{ current_vm_name }}-vda.qcow2"
+        - "{{ current_vm_name }}-fd.img"
+      register: fstat
+      ignore_errors: yes
+
+    - name: create the hard disk image (if missing)
+      command: qemu-img create -f qcow2 /var/lib/libvirt/images/{{ current_vm_name }}-vda.qcow2 64G
+      when: fstat.results[0].failed or (force_hd_image_recreate | default(false))
+
+    - name: create the floppy disk image (if missing)
+      command: qemu-img create -f raw /var/lib/libvirt/images/{{ current_vm_name }}-fd.img 1M
+      when: fstat.results[1].failed
+      register: createfloppy
+
+    - name: format the floppy disk image
+      filesystem:
+        dev: /var/lib/libvirt/images/{{ current_vm_name }}-fd.img
+        force: yes
+        fstype: ext4
+        opts: -L OEMDRV
+      when: createfloppy.changed
+
+    - name: mount the floppy
+      mount:
+        src: /var/lib/libvirt/images/{{ current_vm_name }}-fd.img
+        path: /floppy-mpoint
+        fstype: ext4
+        state: mounted
+
+    - name: publish the kickstart file
+      template:
+        src: templates/rhel-vm-guest.ks.j2
+        dest: /floppy-mpoint/ks.cfg
+      register: createkickstart
+
+    - name: unmount the floppy
+      mount:
+        path: /floppy-mpoint
+        state: absent
+
+    - name: make sure the mount point is gone
+      file:
+        path: /floppy-mpoint
+        state: absent
+
+    # Now this createkickstart check makes very much sense here in the
+    # following two steps, although it's redundant if someone told us to
+    # scratch the disks, so just skip them if so.
+    - name: kill any existing vm if the kickstart file was regenerated
+      include_tasks: playbooks/reuse/destroy-and-kill-vm.yml
+      when:
+        - not force_hd_image_recreate | default(false)
+        - createkickstart.changed
+
+    # Bit dumb, but hey. We don't know who's there any more. Recreate or not?
+    - name: get a list of vms
+      virt:
+        command: list_vms
+      register: vm_list
+
+    # Note that current_vm_firstboot activates the KS stuff in the template,
+    # attaching a CDROM and a floppy disk, and choosing CD as the default boot
+    # device.
+    # NOTE: the correct operation of this depends on "poweroff" in the KS file.
+    - name: create a vm based off of a template
+      vars:
+        current_vm_firstboot: yes
+      virt:
+        command: define
+        xml: "{{ lookup('template', 'templates/libvirt-vm-guest.xml.j2') }}"
+      when: "current_vm_name not in vm_list.list_vms"
+      register: createvm
+
+    - name: firstboot a vm if one was created in step above
+      virt:
+        name: "{{ current_vm_name }}"
+        state: running
+      when: createvm.changed
+
+    - name: wait for the vm to shut down after installation
+      virt:
+        command: info
+        name: "{{ current_vm_name }}"
+      register: vmstate
+      until: vmstate[current_vm_name].state == 'shutdown'
+      delay: 10
+      retries: 60
+      when: createvm.changed
+
+    # Redefine the VM with "normal" settings.
+    - name: undefine the current guest config
+      virt:
+        command: undefine
+        name: "{{ current_vm_name }}"
+      when: createvm.changed
+
+    - name: recreate the guest config without the firstboot crap
+      vars:
+        current_vm_firstboot: no
+      virt:
+        command: define
+        xml: "{{ lookup('template', 'templates/libvirt-vm-guest.xml.j2') }}"
+      when: createvm.changed
+
+    - name: make sure the vm is shut down
+      virt:
+        command: info
+        name: "{{ current_vm_name }}"
+      register: vmstate
+
+    - name: do the final boot (or at least make sure it's up)
+      virt:
+        name: "{{ current_vm_name }}"
+        state: running
+      when: vmstate[current_vm_name].state != 'running'
+
+    - name: wait for vm to finish booting
+      delegate_to: localhost
+      become: no
+      wait_for:
+        host: "{{ vms['services'].hostname }}"
+        port: 22
+        delay: 10
+        sleep: 10
+        timeout: 300
+        search_regex: OpenSSH
+        state: started
+
+    - name: report all is well and the world continues
+      debug:
+        msg: |
+          The services VM provisioning process is complete. You may now move on
+          to VM configuration process and provision the services on it.
+...

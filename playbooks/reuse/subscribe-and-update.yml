@@ -1,0 +1,31 @@
+---
+# NOTE: ALWAYS USE A DYNAMIC INCLUDE FOR THIS FILE! (i.e. include_tasks)
+#       IT WILL FAIL MISERABLY IF YOU TRY TO import_tasks WITH IT.
+#
+# This simply uses inventory and/or playbook group/host variables to do RHSM
+# subscriptions and updates.
+#
+# Have a look at group_vars/ for more information.
+- name: register and subscribe a system
+  redhat_subscription:
+    username: "{{ rhel_sub_user }}"
+    password: "{{ rhel_sub_pass }}"
+    pool_ids: "{{ rhel_sub_pools }}"
+    auto_attach: no
+
+- name: enable package repos
+  rhsm_repository:
+    name: "{{ rhel_pkg_repos }}"
+    state: enabled
+
+- name: disable package repos
+  rhsm_repository:
+    name: "{{ rhel_pkg_repos_disable }}"
+    state: disabled
+  when: rhel_pkg_repos_disable is defined
+
+- name: update all packages
+  package:
+    name: '*'
+    state: latest
+...

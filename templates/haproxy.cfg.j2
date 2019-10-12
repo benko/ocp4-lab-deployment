@@ -1,0 +1,79 @@
+global
+    log         127.0.0.1 local2 info
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+
+    # utilize system-wide crypto-policies
+    ssl-default-bind-ciphers PROFILE=SYSTEM
+    ssl-default-server-ciphers PROFILE=SYSTEM
+
+defaults
+    mode                    tcp
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option                  http-server-close
+    option                  redispatch
+    option forwardfor       except 127.0.0.0/8
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+frontend kube_api
+    bind 0.0.0.0:6443
+    default_backend kube_api
+
+backend kube_api
+    balance roundrobin
+    option ssl-hello-chk
+{% if bootstrap_gone | default(false) %}
+    server bootstrap bootstrap.{{ cluster_name }}.{{ parent_domain }}:6443 check
+{% endif %}
+    server master master.{{ cluster_name }}.{{ parent_domain }}:6443 check
+
+frontend machine_config
+    bind 0.0.0.0:22623
+    default_backend machine_config
+
+backend machine_config
+    balance roundrobin
+    option ssl-hello-chk
+{% if bootstrap_gone | default(false) %}
+    server bootstrap bootstrap.{{ cluster_name }}.{{ parent_domain }}:22623 check
+{% endif %}
+    server master master.{{ cluster_name }}.{{ parent_domain }}:22623 check
+
+frontend router_https
+    bind 0.0.0.0:443
+    default_backend router_https
+
+backend router_https
+    balance roundrobin
+    option ssl-hello-chk
+    server worker1 worker1.{{ cluster_name }}.{{ parent_domain }}:443 check
+    server worker2 worker2.{{ cluster_name }}.{{ parent_domain }}:443 check
+
+frontend router_http
+    mode http
+    bind 0.0.0.0:81
+    default_backend router_http
+
+backend router_http
+    mode http
+    server worker1 worker1.{{ cluster_name }}.{{ parent_domain }}:80 check
+    server worker2 worker2.{{ cluster_name }}.{{ parent_domain }}:80 check
+

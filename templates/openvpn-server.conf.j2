@@ -1,0 +1,43 @@
+#
+# A simple, non-secure, OpenVPN tunneling server for the cluster network.
+#
+port 1194
+dev tun
+
+{% if vm_svc_add_interface | default(false) %}
+# Set the source address on multi-homed hosts
+local {{ vm_svc_add_ipaddr }}
+{% endif %}
+
+tls-server
+ca /etc/openvpn/certs/ca.crt
+cert /etc/openvpn/certs/cluster.crt
+key /etc/openvpn/certs/cluster.key
+{% if ovpn_enforce_dhparam %}
+dh /etc/openvpn/certs/dh.pem
+{% else %}
+dh none
+{% endif %}
+
+mode server
+
+ifconfig 192.168.101.1 192.168.101.2
+ifconfig-pool 192.168.101.4 192.168.101.255
+route 192.168.101.0 255.255.255.0
+
+push "route 192.168.101.1 255.255.255.255"
+push "route {{ ip_prefix }}.0 255.255.255.0"
+
+push "dhcp-option DOMAIN {{ parent_domain }}"
+push "dhcp-option DNS {{ vms['services'].ipaddr }}"
+
+keepalive 10 60
+inactive 600
+
+user openvpn
+group openvpn
+
+persist-tun
+persist-key
+
+verb 4

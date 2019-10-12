@@ -1,0 +1,26 @@
+---
+# NOTE: THIS PLAYBOOK IS COMPLETELY UNSUPPORTED! IT WORKED FOR ME WHEN
+# DEPLOYING HOSTS FROM SCRATCH, BUT IT MAY BLOW UP YOUR KITCHEN, HURT YOUR
+# PET(s), PUNCTURE YOUR CAR TYRE, OR POISON YOUR CHILDREN WITH FOOD. NOT LEAST,
+# IT MIGHT SEVERELY SCREW UP THE SYSTEM(s) YOU ARE TRYING TO RUN IT AGAINST.
+#
+# YOU GET TO KEEP THE PIECES WHEN THAT HAPPENS. DON'T COME CRYING.
+
+- name: subscribe rhel systems, activate subscription, enable repos, update packages
+  hosts: hypervisors
+  become: yes
+  tasks:
+
+    - name: subscribe and update according to recipe and variables
+      include_tasks: playbooks/reuse/subscribe-and-update.yml
+      tags:
+        - rhsm
+
+    - name: add libvirt client and related python shit
+      package:
+        name:
+          - libvirt-client
+          - python3-libvirt
+          - python3-lxml
+        state: latest
+...

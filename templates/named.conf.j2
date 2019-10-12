@@ -1,0 +1,45 @@
+{#
+# This is currently set up so that it only works when deployed for services VM.
+# I see no real need to make it more generic.
+#}
+options {
+	listen-on port 53 { any; };
+	directory 	"/var/named";
+	dump-file 	"/var/named/cache_dump.db";
+	statistics-file "/var/named/named_stats.txt";
+	memstatistics-file "/var/named/named_mem_stats.txt";
+	secroots-file	"/var/named/named.secroots";
+	recursing-file	"/var/named/named.recursing";
+	allow-query     { any; };
+	forwarders      { {{ vms['services'].dns }}; };
+
+	recursion yes;
+
+	dnssec-enable no;
+	dnssec-validation no;
+
+	pid-file "/run/named/named.pid";
+	session-keyfile "/run/named/session.key";
+};
+
+logging {
+        channel default_debug {
+                file "named.run";
+                severity dynamic;
+        };
+};
+
+zone "." IN {
+	type hint;
+	file "named.ca";
+};
+
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";
+
+zone "{{ parent_domain }}." IN {
+	type master;
+	file "{{ parent_domain }}.zone";
+	allow-query { any; };
+};
+

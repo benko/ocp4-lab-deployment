@@ -1,0 +1,62 @@
+---
+# NOTE: THIS PLAYBOOK IS COMPLETELY UNSUPPORTED! IT WORKED FOR ME WHEN
+# DEPLOYING HOSTS FROM SCRATCH, BUT IT MAY BLOW UP YOUR KITCHEN, HURT YOUR
+# PET(s), PUNCTURE YOUR CAR TYRE, OR POISON YOUR CHILDREN WITH FOOD. NOT LEAST,
+# IT MIGHT SEVERELY SCREW UP THE SYSTEM(s) YOU ARE TRYING TO RUN IT AGAINST.
+#
+# YOU GET TO KEEP THE PIECES WHEN THAT HAPPENS. DON'T COME CRYING.
+
+- name: configure bridged networking on the hosts
+  hosts: hypervisors
+  become: yes
+  tasks:
+    - name: figure out what to bridge over
+      set_fact:
+        libvirt_ocp_bridge_device: "{{ item }}"
+      loop: "{{ ansible_interfaces }}"
+      when:
+        - item | regex_search('^(enp|eno|eth)')
+        - vars['ansible_' ~ item]['active']
+
+    - name: break it if there is no suitable device
+      fail:
+        msg: No suitable bridge device found!
+      when: libvirt_ocp_bridge_device is undefined
+
+    - name: announce what we're doing
+      debug:
+        msg: Creating a bridged network using {{ libvirt_ocp_bridge_device }}...
+
+    - name: wait for confirmation
+      delegate_to: localhost
+      pause:
+        prompt: Press Ctrl-C within the next 10 seconds if the above configuration is not OK.
+        seconds: 10
+
+    - name: make sure the bridge exists
+      template:
+        src: templates/ocpbr0.j2
+        dest: /etc/sysconfig/network-scripts/ifcfg-ocpbr0
+        owner: root
+        group: root
+        mode: 0644
+      when: not ansible_ocpbr0.active
+      notify: bounce interfaces
+
+    - name: make sure the primary device is a slave
+      template:
+        src: templates/ocpbr0slave.j2
+        dest: /etc/sysconfig/network-scripts/ifcfg-{{ libvirt_ocp_bridge_device }}
+        owner: root
+        group: root
+        mode: 0644
+      when: libvirt_ocp_bridge_device not in ansible_ocpbr0.interfaces
+      notify: bounce interfaces
+
+  handlers:
+    - name: bounce interfaces
+      shell: /usr/sbin/ifdown {{ item }} ; /usr/sbin/ifup {{ item }}
+      loop:
+        - ocpbr0
+        - "{{ libvirt_ocp_bridge_device }}"
+...

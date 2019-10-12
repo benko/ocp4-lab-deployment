@@ -1,0 +1,42 @@
+<VirtualHost *:80>
+{% if create_proxy_config | default(false) %}
+    ServerName lb.{{ parent_domain }}
+    ServerAlias *.{{ cluster_name }}.{{ parent_domain }}
+
+    ProxyPass / http://localhost:81/
+    ProxyPassReverse / http://localhost:81/
+
+    ErrorLog "logs/proxy-error.log"
+    LogLevel info
+
+    <IfModule log_config_module>
+	CustomLog logs/proxy-access.log combined
+    </IfModule>
+{% else %}
+    ServerName {{ vms['services'].hostname }}
+    ServerAlias {{ vms['services'].ipaddr }} services
+
+    ErrorLog "logs/default-error.log"
+    LogLevel info
+
+    <IfModule log_config_module>
+	CustomLog logs/default-access.log combined
+    </IfModule>
+
+    DocumentRoot "/var/www/html"
+    <Directory "/var/www">
+	AllowOverride None
+	Require all granted
+    </Directory>
+
+    <Directory "/var/www/html">
+	Options Indexes FollowSymLinks
+	AllowOverride None
+	Require all granted
+    </Directory>
+
+    <IfModule dir_module>
+	DirectoryIndex index.html
+    </IfModule>
+{% endif %}
+</VirtualHost>
