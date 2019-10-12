@@ -4,9 +4,9 @@
 # OpenShift Cluster configuration.
 #
 # Some suggestions on where to put things:
-#  - binary artifacts path (for purposes of easy .gitignore)
+#  - binary artifacts path (easier .gitignore - MAKE IT A RELATIVE PATH!)
 binary_artifact_path: binaries/
-#  - the cluster state directory
+#  - the cluster state directory (same here - MAKE IT A RELATIVE PATH!)
 openshift_rtdata_path: cluster/
 #  - the installer and client binaries
 openshift_installer_path: "{{ binary_artifact_path }}/openshift-install"
@@ -140,7 +140,15 @@ vms:
     # access, and even that one only the first time around.
     # Alternatively, you can of course set this to svc_default_gw and have your
     # cluster register itself in RH Cloud Manager, and/or use online registries.
-    gw: "{{ ip_prefix }}.199"
+    #
+    # NOTE: You might *have to* set this to the services VM with libvirt
+    #       networking and OpenVPN, if you want to be able to access the
+    #       cluster nodes.
+    # NOTE: If you change any of these for the RHCOS VMs *after* the services
+    #       VM has been provisioned, you will have to regenerate (or otherwise
+    #       fix) the DHCP server configuration.
+    #gw: "{{ ip_prefix }}.199"
+    gw: "{{ ip_prefix }}.21"
   services:
     hostname: services.{{ parent_domain }}
     mac: "{{ mac_prefix }}:21"
