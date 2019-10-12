@@ -29,6 +29,11 @@ nexus_release: 3.19.1-01
 openvpn_release: 2.4.7-1
 pkcs11_release: 1.22-7
 
+# A chance OpenVPN setting: normally we'll run without DH params, which
+# enforces ECDS. If your client can't speak it, you should really update to a
+# newer OpenSSL library. But in the mean time, set this to "yes".
+ovpn_enforce_dhparam: no
+
 # DNS settings. "cluster_name" becomes a subdomain of "parent_domain".
 # All the virtual machines (except services) are provisioned in the cluster
 # domain. services VM is provisioned in parent domain.
@@ -39,11 +44,11 @@ cluster_name: ocp
 fwd_dns_server: 172.25.254.254
 
 # Similarly, the (actual) default gateway for the services VM.
-svc_default_gw: 172.25.250.254
+svc_default_gw: 172.25.254.252
 
 # Since we're talking about addressing, let's also set the MAC address and IP
 # subnet prefix here. Free for you to change, of course.
-ip_prefix: 172.25.252
+ip_prefix: 172.25.250
 mac_prefix: 52:54:00:00:fa
 
 # Still in networking. If there is bridged network, say so and tell which
@@ -51,6 +56,19 @@ mac_prefix: 52:54:00:00:fa
 vm_use_bridge: yes
 vm_bridge_name: privbr0
 vm_network_name: ignored-if-use-bridge
+
+# Services VM. Even if using a bridge, there might be a need to create a second
+# interface and connect it to a bridge, as the primary interface bridge may be
+# to a non-reachable network.
+#
+# NOTE: Only do this in environments where you intend to only run one cluster,
+# otherwise you will have a pretty nice mess on your hands thanks to IP
+# conflicts.
+vm_svc_add_interface: yes
+vm_svc_add_bridge_name: br0
+vm_svc_add_macaddr: "{{ mac_prefix }}:f1"
+vm_svc_add_ipaddr: 172.25.254.21
+vm_svc_add_netmask: 255.255.255.0
 
 # The deployed image URLs. These will depend on the version of OpenShift
 # installer you use, but should be OK for nightly builds. What they mostly
@@ -80,7 +98,8 @@ nfs_exports:
 # We create a certificate authority as part of the installation. These are the
 # related settings. The reason validity is an absolute date is because with a
 # relative date, all cert-related operations become non-idempotent.
-# NOTE: *All* generated certificates will use this expiration date.
+#
+# NOTE: All generated certificates will use this expiration date.
 x509_ca_location: /var/www/html/ca
 x509_ca_pass: veryverysecret
 x509_validity_until: '20291011000000Z'
@@ -94,7 +113,7 @@ vms:
   # The default settings that VMs can override (resolved at play level).
   # These (obviously) do not provide hostname, mac, and ipaddr.
   global:
-    netmask: 255.255.255.0
+    netmask: 255.255.255.0      # changing this will make your life miserable
     dns: "{{ ip_prefix }}.21"   # use services VM - XXX DO NOT CHANGE THIS! XXX
     tz: Europe/Tallinn
     mem_gb: 6
