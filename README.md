@@ -129,7 +129,7 @@ needs a VPN connection to access the resources - a nice real-life scenario.
 See the service provisioning playbook for more on configuration; bottom line,
 you will need to add the bridged iface manually after installation.
 
-### Runtime Configuration Variables
+### Playtime Configuration Variables
 
 There are some variables that can override specific behaviour of some of the
 playbooks. Here's a non-exhaustive list:
@@ -150,6 +150,8 @@ playbooks. Here's a non-exhaustive list:
     ``vm_network_name``, but they are of course mutually exclusive. The former
     is only used whn ``vm_use_bridge`` is on, and vice-versa.
 
+N.B.: add something about default gateway and why it needs to be broken.
+
 ### Useful Tags
 
 While (re)running the playbooks, some tags may be of particular use because
@@ -157,8 +159,8 @@ they simply save time. Such as:
 
  - ``rhsm``
 
-    Will skip any subscription-related action. RHSM can be slow, and this just
-    skips those slow steps.
+    Skipping this tag will skip any subscription-related action. RHSM can be
+    slow, and this just skips those slow steps.
 
  - ``openvpn``
 
