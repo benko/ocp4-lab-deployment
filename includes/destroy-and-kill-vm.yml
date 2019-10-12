@@ -7,6 +7,9 @@
 #
 # It depends on the var called current_vm_name which should be set by the
 # master play to do other things anyway, so no woes here.
+#
+# The method of shutting down the VM can be switched to a less brutal one by
+# setting kill_method=shutdown in the including task in the parent.
 - name: get a list of vms
   virt:
     command: list_vms
@@ -15,7 +18,7 @@
 - name: power off the vm if it's there
   virt:
     name: "{{ current_vm_name }}"
-    state: destroyed
+    state: "{{ kill_method | default('destroyed') }}"
   when:
     - "current_vm_name in vm_list.list_vms"
 
