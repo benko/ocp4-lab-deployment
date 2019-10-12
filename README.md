@@ -126,13 +126,24 @@ it so you can get into the cluster.
 The idea is your laptop is an external client to the airgapped system, so it
 needs a VPN connection to access the resources - a nice real-life scenario.
 
-See the service provisioning playbook for more on configuration; bottom line,
-you will need to add the bridged iface manually after installation.
+See the section below and the service provisioning playbook for more on
+configuration; bottom line, you will need to add the bridged iface manually
+after installation.
 
 ### Playtime Configuration Variables
 
 There are some interesting variables that can override default behaviour of
 some of the playbooks. Here's a non-exhaustive list:
+
+ - ``x509_validity_until``
+
+    We create a certificate authority as part of the installation. This
+    variable must contain an absolute date in format ``YYYYMMDDhhmmssZ``.
+
+    The reason validity is an absolute date is because with a relative date,
+    all cert-related operations become non-idempotent.
+
+    > NOTE: All generated certificates will use this expiration date.
 
  - ``force_hd_image_recreate=yes``
 
