@@ -355,40 +355,6 @@
         state: true
         persistent: yes
 
-    # haproxy configuration
-    - name: configure haproxy
-      template:
-        src: templates/haproxy.cfg.j2
-        dest: /etc/haproxy/haproxy.cfg
-        owner: root
-        group: root
-        mode: 0644
-      notify: (re)start haproxy
-
-    - name: make sure the firewall accepts https
-      firewalld:
-        service: https
-        state: enabled
-        immediate: yes
-        permanent: yes
-
-    - name: also make sure the firewall accepts all the weirdo ports
-      firewalld:
-        port: "{{ item }}/tcp"
-        state: enabled
-        immediate: yes
-        permanent: yes
-      loop:
-        - 81
-        - 6443
-        - 22623
-
-    - name: haproxy needs some seboolean love to connect to backends
-      seboolean:
-        name: haproxy_connect_any
-        state: true
-        persistent: yes
-
     # dhcp server configuration
     - name: configure dhcp server
       template:
@@ -519,6 +485,7 @@
       notify: (re)start nexus
 
     - name: check if there are any backups to speak of - DB check
+      become: no
       delegate_to: localhost
       file:
         path: "{{ binary_artifact_path }}/nexus-db-backup.tar.gz"
@@ -527,6 +494,7 @@
       register: db_backup_is_there
 
     - name: check if there are any backups to speak of - blob check
+      become: no
       delegate_to: localhost
       file:
         path: "{{ binary_artifact_path }}/nexus-blob-backup.tar.gz"
@@ -543,8 +511,8 @@
         success_msg: |
           GOOD: Nexus backup found on the control node. Will do a restore next.
         that:
-          - db_backup_is_there.failed is undefined
-          - blob_backup_is_there.failed is undefined
+          - not db_backup_is_there.failed
+          - not blob_backup_is_there.failed
       ignore_errors: yes
       register: to_do_or_not_to_do
 
@@ -655,12 +623,6 @@
         enabled: yes
         state: restarted
 
-    - name: (re)start haproxy
-      service:
-        name: haproxy
-        enabled: yes
-        state: restarted
-
     - name: (re)start the dhcp server
       service:
         name: dhcpd
@@ -709,4 +671,84 @@
           Everything resolver-related appears to be in order. You can proceed to cluster deployment.
         that:
           - "named_is_running == 'nonexistent.apps.' ~ cluster_name ~ '.' ~ parent_domain ~ '.\n'"
+
+# NOTE: there is a chicken-egg problem with haproxy. couldn't configure and
+# (re)start haproxy in the main play. until the resolver is working properly,
+# that will fail, as haproxy will try to look up backends.
+- name: finally, configure haproxy
+  hosts: services
+  become: yes
+  tasks:
+    # haproxy configuration
+    - name: configure haproxy
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: 0644
+      notify: (re)start haproxy
+
+    - name: make sure the firewall accepts https
+      firewalld:
+        service: https
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: also make sure the firewall accepts all the weirdo ports
+      firewalld:
+        port: "{{ item }}/tcp"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      loop:
+        - 81
+        - 6443
+        - 22623
+
+    - name: haproxy needs some seboolean love to connect to backends
+      seboolean:
+        name: haproxy_connect_any
+        state: true
+        persistent: yes
+
+  handlers:
+    - name: (re)start haproxy
+      service:
+        name: haproxy
+        enabled: yes
+        state: restarted
+
+# ultimately, we have given nexus enough time to restore the backups, so we can
+# now test it's up and remove those bak files.
+- name: clean up nexus backups
+  hosts: services
+  become: yes
+  tasks:
+    - name: keep knocking until someone opens the door
+      become: no
+      delegate_to: localhost
+      uri:
+        method: GET
+        url: http://services.{{ parent_domain }}:8081/service/rest/v1/repositories
+        status_code: 200
+      register: nexus_is_up
+      until: nexus_is_up.status == 200
+      retries: 5
+      delay: 10
+
+    - name: find the backup files
+      find:
+        paths:
+          - /opt/sonatype-work/nexus3/restore-from-backup
+        patterns:
+          - '*.bak'
+      register: backups
+
+    - name: remove the bak files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ backups.files }}"
 ...
