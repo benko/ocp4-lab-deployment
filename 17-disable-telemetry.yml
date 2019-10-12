@@ -1,0 +1,30 @@
+---
+- name: opt out of telemetry collection
+  hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+    - name: create the configmap to apply
+      copy:
+        dest: /tmp/cm-monitoring-optout.yml
+        content:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: cluster-monitoring-config
+            namespace: openshift-monitoring
+          data:
+            config.yaml: |+
+              telemeterClient:
+                enabled: false
+
+    - name: apply the cluster monitoring configmap
+      command: >
+        {{ oc_bin }} --kubeconfig={{ openshift_rtdata_path }}/auth/kubeconfig
+        -n openshift-monitoring apply -f /tmp/cm-monitoring-optout.yml
+
+    - name: lose the cm
+      file:
+        path: /tmp/cm-monitoring-optout.yml
+        state: absent
+...
