@@ -121,6 +121,8 @@ configure it correctly.
 
 More on either of that below.
 
+TODO: perhaps just move most of this to the openvpn section
+
 ### Virtualization Host Configuration
 
 This can go in any direction, really. Some basics:
@@ -139,15 +141,14 @@ connect to the services VM whenever they need it.
 
 For external access, indeed for *anything* beyond simply provisioning that
 initial ``services`` VM, but not even configuring it, you will need an
-additional directly accessible interface, and subsequently OpenVPN listening on
-it so you can get into the cluster.
+additional directly accessible interface, and subsequently an OpenVPN listening
+on it so you (and the playbooks) can get into the cluster.
 
-The idea is your laptop is an external client to the airgapped system, so it
-needs a VPN connection to access the resources - a nice real-life scenario.
+The idea is your control node is an external client to the airgapped system, so
+it needs a VPN connection to access the resources - a nice real-life scenario.
 
-See the section below and the service provisioning playbook for more on
-configuration; bottom line, you will need to add the bridged iface manually
-after installation.
+See the section below, ``group_vars/all.yml``, and the service provisioning
+playbook for more on configuration.
 
 ### Playtime Configuration Variables
 
@@ -192,7 +193,7 @@ of some of the playbooks. Here's a non-exhaustive list:
 
     There are two settings that go along with that - ``vm_bridge_name`` and
     ``vm_network_name``, but they are of course mutually exclusive. The former
-    is only used whn ``vm_use_bridge`` is on, and vice-versa.
+    is only used when ``vm_use_bridge`` is on, and vice-versa.
 
  - ``vm_svc_add_interface``
 
@@ -261,6 +262,10 @@ After all, you want to be getting a response from the VMs, right? So they need
 to have the correct default gateway set.
 
 TODO: finish this.
+
+TODO: where are the certs for the client?
+
+TODO: example openvpn client config
 
 ## Additional Artifacts
 
