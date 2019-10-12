@@ -141,6 +141,18 @@
         cert_common_name: "registry.{{ parent_domain }}"
       include_tasks: includes/create-cert-artifacts.yml
 
+    # make openvpn certs available on control node for later
+    - name: pull CA and openvpn cert, and openvpn key
+      synchronize:
+        mode: pull
+        src: /var/www/html/ca/{{ item }}
+        dest: "{{ binary_artifact_path }}/{{ item }}"
+        perms: yes
+      loop:
+        - ca.crt
+        - openvpn.crt
+        - openvpn.key
+
     # openvpn installation
     - name: see if we need to install openvpn
       command: rpm -q openvpn
@@ -271,6 +283,25 @@
         state: enabled
         immediate: yes
         permanent: yes
+      tags:
+        - openvpn
+
+    - name: make sure ip forwarding is on
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+        reload: yes
+      tags:
+        - openvpn
+
+    - name: add interface tun0 to trusted zone
+      firewalld:
+        interface: tun0
+        zone: trusted
+        state: present
+        permanent: yes
+        immediate: yes
       tags:
         - openvpn
 
@@ -492,6 +523,8 @@
         state: file
       ignore_errors: yes
       register: db_backup_is_there
+      tags:
+        - nexus_restore
 
     - name: check if there are any backups to speak of - blob check
       become: no
@@ -501,6 +534,8 @@
         state: file
       ignore_errors: yes
       register: blob_backup_is_there
+      tags:
+        - nexus_restore
 
     - name: reason over results just above
       assert:
@@ -515,6 +550,8 @@
           - not blob_backup_is_there.failed
       ignore_errors: yes
       register: to_do_or_not_to_do
+      tags:
+        - nexus_restore
 
     # TODO: recreate backups without registry authentication options!
     # https://support.sonatype.com/hc/en-us/articles/115013153887-Docker-Repository-Configuration-and-Client-Connection
@@ -523,6 +560,8 @@
         path: /opt/sonatype-work/nexus3/restore-from-backup
         state: directory
       when: to_do_or_not_to_do.evaluated_to is undefined
+      tags:
+        - nexus_restore
 
     - name: put the config backups where they belong
       unarchive:
@@ -532,6 +571,8 @@
         group: root
       when: to_do_or_not_to_do.evaluated_to is undefined
       notify: (re)start nexus
+      tags:
+        - nexus_restore
 
     - name: extract the nexus blob backups
       unarchive:
@@ -541,6 +582,8 @@
         group: root
       when: to_do_or_not_to_do.evaluated_to is undefined
       notify: (re)start nexus
+      tags:
+        - nexus_restore
 
     - name: add nexus.service for systemd
       template:
