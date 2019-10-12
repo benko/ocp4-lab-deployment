@@ -62,9 +62,13 @@ vm_network_name: ignored-if-use-bridge
 # interface and connect it to a bridge, as the primary interface bridge may be
 # to a non-reachable network.
 #
+# NOTE: At any rate, regardless of what you decide here, it is your
+#       responsibility to make sure all the VMs resolve correctly from the
+#       point where services VM is up and running.
+#
 # NOTE: Only do this in environments where you intend to only run one cluster,
-# otherwise you will have a pretty nice mess on your hands thanks to IP
-# conflicts.
+#       otherwise you will have a pretty nice mess on your hands thanks to IP
+#       conflicts.
 vm_svc_add_interface: yes
 vm_svc_add_bridge_name: br0
 vm_svc_add_macaddr: "{{ mac_prefix }}:f1"
