@@ -31,6 +31,14 @@
     - name: create and boot the VM
       include_tasks: includes/create-and-boot-vm.yml
 
+    - name: warn about accessibility
+      debug:
+        msg: |
+          If you have not yet, this would be a good time to configure and start
+          your VPN connection to the services VM as the cluster nodes will
+          probably be unreachable directly with this networking configuration.
+      when: vm_svc_add_interface | default(false)
+
     - name: wait for the VM to come back after installation
       delegate_to: localhost
       become: no
@@ -39,7 +47,7 @@
         port: 22
         delay: 10
         sleep: 10
-        timeout: 300
+        timeout: 600
         search_regex: OpenSSH
         state: started
 
