@@ -289,7 +289,7 @@
     - name: make sure ip forwarding is on
       sysctl:
         name: net.ipv4.ip_forward
-        value: 1
+        value: "1"
         state: present
         reload: yes
       tags:
@@ -299,7 +299,7 @@
       firewalld:
         interface: tun0
         zone: trusted
-        state: present
+        state: enabled
         permanent: yes
         immediate: yes
       tags:
