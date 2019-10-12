@@ -6,6 +6,7 @@
 # They do, however, need some parameters (i.e. task variables) to work:
 #  - x509_ca_location
 #  - x509_ca_pass
+#  - x509_validity_until
 #     these should be set on the global scope anyway
 #
 #  - cert_service_name
