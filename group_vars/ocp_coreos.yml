@@ -2,4 +2,5 @@
 # All RHEL CoreOS systems come with a default non-privileged user called "core"
 # by default. We need to explain this to Ansible.
 ansible_user: core
+ansible_python_interpreter: /usr/libexec/platform-python
 ...
