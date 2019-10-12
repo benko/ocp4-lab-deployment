@@ -229,6 +229,12 @@ they simply save time. Such as:
     firstboot, you might want to prevent it from restoring everything all over
     again and skip any task bearing this tag.
 
+ - ``kick_bootstrap``
+
+    If you're planning on redeploying the cluster several times in a very short
+    period of time, it might make sense to keep the bootstrap VM as a member of
+    load balancing groups in haproxy. Skipping this tag will allow you do it.
+
 ## Notes on OpenVPN
 
 The network configuration for cluster VMs has to change a bit with OpenVPN.
