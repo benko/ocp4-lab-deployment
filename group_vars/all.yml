@@ -8,8 +8,9 @@
 binary_artifact_path: binaries/
 #  - the cluster state directory
 openshift_rtdata_path: cluster/
-#  - the installer binary
+#  - the installer and client binaries
 openshift_installer_path: "{{ binary_artifact_path }}/openshift-install"
+oc_bin: "{{ binary_artifact_path }}/oc"
 #  - the RHEL ISO image to use (all expected in binary_artifact_path)
 rhel8_artifacts:
   - rhel-8.0-x86_64-dvd.iso
