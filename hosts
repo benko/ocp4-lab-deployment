@@ -3,20 +3,28 @@
 # node. If you have a DNS you can use, even better. Or, if you want to, add
 # ansible_host variable to each of those.
 #
-# This is to be able to target the services VM without knowing all the details.
+# This is to be able to target the services VM in plays without knowing all the
+# details.
 [services]
 services.lab.example.com
 
-# Mostly anything beyond this point is grouped because of group_vars.
-#
-# OCP4 nodes by operating system. 
-#
-# RHCOS nodes:
-[ocp_coreos]
+# Same shpiel with RHCOS. We need to be able to target some of them in plays.
+[ocp_bootstrap]
 bootstrap.ocp.lab.example.com
+
+[ocp_master]
 master.ocp.lab.example.com
+
+[ocp_workers]
 worker1.ocp.lab.example.com
 worker2.ocp.lab.example.com
+
+# Mostly anything beyond this point is grouped because of group_vars.
+#
+[ocp_coreos:children]
+ocp_bootstrap
+ocp_master
+ocp_workers
 
 # RHEL8 node:
 [ocp_rhel:children]
