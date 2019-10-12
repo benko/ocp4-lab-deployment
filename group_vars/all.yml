@@ -77,6 +77,19 @@ vm_svc_add_netmask: 255.255.255.0
 ocp_release_image: openshift-release-dev/ocp-release-nightly
 ocp_worker_image: openshift-release-dev/ocp-v4.0-art-dev
 
+# Any additional content that should be mirrored in the Nexus repo.  Do note
+# that the only two proxy repositories defined as of now are quay.io and
+# registry.redhat.io. If your mirrored images are coming from somewhere else,
+# you will need to add a new proxy repository to Nexus configuration (and
+# modify the group repo on port 5000).
+additional_content_sources:
+  - registry_host: registry.redhat.io
+    image_basename: rhel8/postgresql-96
+  - registry_host: registry.redhat.io
+    image_basename: rhscl/mysql-57-rhel7
+  - registry_host: registry.redhat.io
+    image_basename: redhat-openjdk-18/openjdk18-openshift
+
 # NFS server exports for PersistentVolume provisioning. The important bit is
 # that the registry PV is at least 100Gi. Create as many as you want here, the
 # playbooks will create both the directories on NFS server (and export them)

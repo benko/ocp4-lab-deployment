@@ -132,8 +132,25 @@ after installation.
 
 ### Playtime Configuration Variables
 
-There are some interesting variables that can override default behaviour of
-some of the playbooks. Here's a non-exhaustive list:
+What you most probably want to have a look at in terms of enriching your
+airgapped experience, is ``additional_content_sources``. It is an array of
+simple double-attribute dictionaries:
+
+    additional_content_sources:
+      - registry_host: registry.redhat.io
+        image_basename: rhel8/postgresql-96
+      - registry_host: registry.redhat.io
+        image_basename: rhscl/mysql-57-rhel7
+      - registry_host: registry.redhat.io
+        image_basename: redhat-openjdk-18/openjdk18-openshift
+
+Do note that the only two proxy repositories defined as of now are ``quay.io``
+and ``registry.redhat.io``. If your mirrored images are coming from somewhere
+else, you will need to add a new proxy repository to Nexus configuration (and
+modify the group repository on port 5000).
+
+There are some other interesting variables that can override default behaviour
+of some of the playbooks. Here's a non-exhaustive list:
 
  - ``x509_validity_until``
 
@@ -144,11 +161,6 @@ some of the playbooks. Here's a non-exhaustive list:
     all cert-related operations become non-idempotent.
 
     > NOTE: All generated certificates will use this expiration date.
-
- - ``force_hd_image_recreate=yes``
-
-    This will kill any existing disk image in VM provisioning playbooks and
-    force them to be recreated from scratch.
 
  - ``vm_use_bridge``
 
@@ -182,6 +194,11 @@ some of the playbooks. Here's a non-exhaustive list:
     enforces ECDS. If your client can't speak it, you should really update
     to a newer OpenSSL library. But in the mean time, set this to "yes" and
     a dh.pem file will be generated for you.
+
+ - ``force_hd_image_recreate=yes``
+
+    This will kill any existing disk image in VM provisioning playbooks and
+    force them to be recreated from scratch.
 
 N.B.: add something about default gateway and why it needs to be broken.
 
