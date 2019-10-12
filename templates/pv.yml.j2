@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ item.name }}
+spec:
+  capacity:
+    storage: {{ item.capacity }}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+    - ReadWriteMany
+    - ReadOnlyMany
+  nfs:
+    server: {{ vms['services'].hostname }}
+    path: {{ nfs_parent }}/{{ item.name }}
+  mountOptions:
+    - hard
+    - intr
+    - nfsvers=4
+  persistentVolumeReclaimPolicy: Recycle

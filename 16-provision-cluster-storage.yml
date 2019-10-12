@@ -1,0 +1,39 @@
+---
+- name: create persistent volumes in the cluster
+  hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+    - name: generate the resource definitions
+      template:
+        src: templates/pv.yml.j2
+        dest: /tmp/pv-{{ item.name }}.yml
+        mode: 0600
+      loop: "{{ nfs_exports }}"
+
+    - name: create them pvs
+      command: >
+        {{ oc_bin }} --kubeconfig={{ openshift_rtdata_path }}/auth/kubeconfig
+        apply -f /tmp/pv-{{ item.name }}.yml
+      loop: "{{ nfs_exports }}"
+
+    - name: kill the pv files
+      file:
+        path: /tmp/pv-{{ item.name }}.yml
+        state: absent
+      loop: "{{ nfs_exports }}"
+
+    - name: check the image-registry operator configuration
+      command: >
+        {{ oc_bin }} --kubeconfig={{ openshift_rtdata_path }}/auth/kubeconfig
+        get configs.imageregistry.operator.openshift.io cluster -o jsonpath='{.spec.storage}'
+      changed_when: never is defined
+      register: regstate
+
+    - name: now fix the operator config if so required
+      command: >
+        {{ oc_bin }} --kubeconfig={{ openshift_rtdata_path }}/auth/kubeconfig
+        patch configs.imageregistry.operator.openshift.io cluster --type=merge
+        -p '{ "spec": { "storage": { "pvc": { "claim": "" } } } }'
+      when: (regstate.stdout | regex_search('^map\\[\\]'))
+...
