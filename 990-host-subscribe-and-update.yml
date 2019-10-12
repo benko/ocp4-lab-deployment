@@ -12,7 +12,7 @@
   tasks:
 
     - name: subscribe and update according to recipe and variables
-      include_tasks: playbooks/reuse/subscribe-and-update.yml
+      include_tasks: includes/subscribe-and-update.yml
       tags:
         - rhsm
 

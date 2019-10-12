@@ -31,7 +31,7 @@
       loop: "{{ rhel8_artifacts }}"
 
     - name: destroy and kill any existing VM if so requested
-      include_tasks: playbooks/reuse/destroy-and-kill-vm.yml
+      include_tasks: includes/destroy-and-kill-vm.yml
       when: force_hd_image_recreate | default(false)
 
     - name: kill the hard disk image (if so requested)
@@ -95,7 +95,7 @@
     # following two steps, although it's redundant if someone told us to
     # scratch the disks, so just skip them if so.
     - name: kill any existing vm if the kickstart file was regenerated
-      include_tasks: playbooks/reuse/destroy-and-kill-vm.yml
+      include_tasks: includes/destroy-and-kill-vm.yml
       when:
         - not force_hd_image_recreate | default(false)
         - createkickstart.changed

@@ -5,7 +5,7 @@
   become: yes
   tasks:
     - name: register and subscribe a system
-      include_tasks: playbooks/reuse/subscribe-and-update.yml
+      include_tasks: includes/subscribe-and-update.yml
       tags:
         - rhsm
 
@@ -131,7 +131,7 @@
       vars:
         cert_service_name: openvpn
         cert_common_name: "{{ vms['services'].hostname }}"
-      include_tasks: playbooks/reuse/create-cert-artifacts.yml
+      include_tasks: includes/create-cert-artifacts.yml
       tags:
         - openvpn
 
@@ -139,7 +139,7 @@
       vars:
         cert_service_name: nexus
         cert_common_name: "registry.{{ parent_domain }}"
-      include_tasks: playbooks/reuse/create-cert-artifacts.yml
+      include_tasks: includes/create-cert-artifacts.yml
 
     # openvpn installation
     - name: see if we need to install openvpn
