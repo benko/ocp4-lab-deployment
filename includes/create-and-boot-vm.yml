@@ -1,0 +1,17 @@
+---
+# NOTE: ALWAYS USE A DYNAMIC INCLUDE FOR THIS FILE! (i.e. include_tasks)
+#       IT WILL FAIL MISERABLY IF YOU TRY TO import_tasks WITH IT.
+#
+# TODO: trololo. document later.
+- name: create a vm based off of a template
+  vars:
+    current_vm_netboot: yes
+  virt:
+    command: define
+    xml: "{{ lookup('template', '../templates/libvirt-vm-guest.xml.j2') }}"
+
+- name: boot the vm and have it install itself
+  virt:
+    name: "{{ current_vm_name }}"
+    state: running
+...

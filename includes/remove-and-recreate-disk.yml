@@ -1,0 +1,13 @@
+---
+# NOTE: ALWAYS USE A DYNAMIC INCLUDE FOR THIS FILE! (i.e. include_tasks)
+#       IT WILL FAIL MISERABLY IF YOU TRY TO import_tasks WITH IT.
+#
+# TODO: trololo. document later.
+- name: make sure the disk image is gone
+  file:
+    path: /var/lib/libvirt/images/{{ current_vm_name }}-vda.qcow2
+    state: absent
+
+- name: (re)create the hard disk image
+  command: qemu-img create -f qcow2 /var/lib/libvirt/images/{{ current_vm_name }}-vda.qcow2 64G
+...

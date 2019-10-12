@@ -1,0 +1,44 @@
+---
+# This play makes sure all RHCOS images are on the web/tftp server, generates
+# a PXE boot config file, and verifies that the ignition file is where it needs
+# to be. Use it with import_playbook, of course.
+#
+# NOTE: Because Ansible is extremely dumb with regard to search paths, we need
+#       to use relative paths here.
+- name: make sure boot artifacts are in place
+  hosts: services
+  become: yes
+  tasks:
+    - debug: var=installer_target
+
+    - name: make sure all required images are on web server
+      copy:
+        src: "../{{ binary_artifact_path }}/{{ item }}"
+        dest: /var/www/html/{{ item }}
+        owner: apache
+        group: apache
+        mode: 0644
+      loop: "{{ coreos_http_artifacts }}"
+
+    - name: make sure all required boot images are in tftp
+      copy:
+        src: "../{{ binary_artifact_path }}/{{ item }}"
+        dest: /var/lib/tftpboot/{{ item }}
+        owner: root
+        group: root
+        mode: 0644
+      loop: "{{ coreos_tftp_artifacts }}"
+
+    - name: publish default pxe config
+      template:
+        src: ../templates/pxelinux.j2
+        dest: /var/lib/tftpboot/pxelinux.cfg/01-{{ vms[installer_target].mac | regex_replace(':', '-') }}
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: make sure ignition config is there
+      file:
+        path: /var/www/html/{{ installer_target }}.ign
+        state: file
+...
