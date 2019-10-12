@@ -131,8 +131,8 @@ you will need to add the bridged iface manually after installation.
 
 ### Playtime Configuration Variables
 
-There are some variables that can override specific behaviour of some of the
-playbooks. Here's a non-exhaustive list:
+There are some interesting variables that can override default behaviour of
+some of the playbooks. Here's a non-exhaustive list:
 
  - ``force_hd_image_recreate=yes``
 
@@ -149,6 +149,28 @@ playbooks. Here's a non-exhaustive list:
     There are two settings that go along with that - ``vm_bridge_name`` and
     ``vm_network_name``, but they are of course mutually exclusive. The former
     is only used whn ``vm_use_bridge`` is on, and vice-versa.
+
+ - ``vm_svc_add_interface``
+
+    Allows you to provision the services VM with an additional network
+    interface that is connected to a bridge, rather than a private libvirt
+    network. This, in turn, allows you to establish a VPN tunnel to it, gain
+    access to the cluster network, and (given the correct client settings) use
+    the services VM DNS in its full glory.
+
+    Again, there are several settings that go with it:
+
+    - ``vm_svc_add_bridge_name``: the bridge to enslave the interface to
+    - ``vm_svc_add_macaddr``: what you think it is
+    - ``vm_svc_add_ipaddr``: what you think it is
+    - ``vm_svc_add_netmask``: what you think it is
+
+ - ``ovpn_enforce_dhparam``
+
+    A chance OpenVPN setting: normally we'll run without DH params, which
+    enforces ECDS. If your client can't speak it, you should really update
+    to a newer OpenSSL library. But in the mean time, set this to "yes" and
+    a dh.pem file will be generated for you.
 
 N.B.: add something about default gateway and why it needs to be broken.
 
