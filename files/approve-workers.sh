@@ -6,7 +6,7 @@
 # Parameters:
 #   $1 = openshift binary path
 #   $2 = cluster runtime information directory
-#   $3... = the names of workers to approve
+#   $3... = the names of workers to approve (a python array is *expected*)
 #
 # NOTE: Yes, yes, I know this could have been done way better but it's 2:30am.
 if [ -n "$1" ]; then
