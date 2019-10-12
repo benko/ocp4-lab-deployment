@@ -102,6 +102,25 @@ configuration settings.
 That being said, do not neglect to have a look at the other var files - you may
 need to change bits and pieces here and there.
 
+### A Quirk!
+
+At any rate, regardless of what kind of network model you decide to use, it is
+your responsibility to make sure all the VMs resolve correctly, which becomes
+particularly important from the point where services VM is up and running.
+
+You have two general options:
+
+ - add every single host to /etc/hosts (this will do for installation)
+ - establish a vpn tunnel to services and use its DNS server
+
+Obviously the latter has a clear advantage of being able to use the cluster
+wildcard DNS domain after everything is up, and ingress will work just fine for
+you, but there is this critical moment *after* the services VM is already
+configured, where you have to actually remember to start up a VPN client and
+configure it correctly.
+
+More on either of that below.
+
 ### Virtualization Host Configuration
 
 This can go in any direction, really. Some basics:
