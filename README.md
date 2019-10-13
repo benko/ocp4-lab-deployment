@@ -21,6 +21,33 @@ not included here. You will need to deploy OCP with internet access for the
 After that, you can repeat it as many times as you like with no internet
 connectivity.
 
+## TL;DR
+
+0. Go to try.openshift.com and do your thing. Download stuff.
+1. Clone this project.
+2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target hypervisor.
+3. Look at the ``group_vars/all.yml`` file and:
+    - choose a ``parent_domain`` and the ``cluster_name``
+    - set ``fwd_dns_server`` to a working DNS that can resolve the interweb
+    - set ``svc_default_gw`` to an actual working gateway
+    - change ``ip_prefix`` if necessary (only in special cases though)
+    - pick your networking type (``vm_use_bridge=yes`` or ``no``) and provide details
+    - decide if you want services VM to have an additional interface and configure it (``vm_svc_add_interface``)
+    - have a look at the VM catalog and see if anything stands out (shouldn't)
+    - provide authorised user data and the pull secret at the end
+4. Look at ``group_vars/rhel.yml`` and fill in your own information.
+5. Make sure /etc/hosts (or some other means) can resolve at least the services VM
+6. If you chose to not use OpenVPN, make sure you also add these to your resolver:
+    - bootstrap
+    - master
+    - worker1
+    - worker2
+    - api (should point to services)
+    - console-openshift-console.apps (should point to services)
+    (the above are all qualified with ``cluster_name``.``parent_domain``)
+7. Run the ``site.yml`` playbook.
+8. Get coffee.
+
 ## Topology
 
 The topology of the lab rendered by this project is as follows:
@@ -175,7 +202,7 @@ and ``registry.redhat.io``. If your mirrored images are coming from somewhere
 else, you will need to add a new proxy repository to Nexus configuration (and
 modify the group repository on port 5000).
 
-TODO: add stuff about why binary_artifact_path and cluster_rtdata_path have to be relative.
+TODO: add stuff about why ``binary_artifact_path`` and ``cluster_rtdata_path`` have to be relative.
 
 There are some other interesting variables that can override default behaviour
 of some of the playbooks. Here's a non-exhaustive list:
@@ -298,6 +325,29 @@ said, "SUCCESS: certificate exists"?) this is not the matter of discussion
 here. Fix your time sync.
 
 https://access.redhat.com/solutions/4355651
+
+### RHEL8
+
+#### Bridged Networking
+
+Network bridges in RHEL8 behave really, *really*, **REALLY** odd.
+
+So don't be surprised if you can't contact the VM host on the bridged IP until
+*it* contacts you first. We'll send our people to talk to your people.
+
+#### Other Weird Behaviour
+
+These are still to be researched, but have occurred:
+
+ - ``fatal: [services.lab.example.com]: FAILED! => {"changed": false, "msg": "Wrong or empty passphrase provided for private key"}``
+
+    This is ``openssl_certificate`` module on crack. It was happy to sign the
+    cert on all hosts but one RHEL8 machine, even after a complete package
+    update.
+
+ - ``coreos-installer[]: failed fetching image headers from http://services.lab.example.com/rhcos-x.y.z-w-metal-bios.raw.gz``
+
+    What can I say. Bridged network on a RHEL8 host? The services VM was fine, the network was 
 
 ## Links & References
 
