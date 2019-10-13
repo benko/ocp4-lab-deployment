@@ -48,6 +48,7 @@ connectivity.
     (the above are all qualified with ``cluster_name``.``parent_domain``)
 7. Run the ``site.yml`` playbook.
 8. Get coffee.
+9. Read the rest of the document (and submit any issues).
 
 ## Topology
 
