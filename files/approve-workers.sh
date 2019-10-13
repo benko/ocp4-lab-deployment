@@ -64,7 +64,7 @@ while [ "$(${CMD} get csr | grep Pending | grep :node-bootstrapper | wc -l | tr 
     echo "Waiting for all pending bootstrap CSRs to show up... (${ITER}/${LIMIT}) - found ${FOUND}, expecting ${EXPECT}"
     sleep ${WAIT}
 done
- TODO: see if we timed out, see if FOUND == EXPECT, etc.
+# TODO: see if we timed out, see if FOUND == EXPECT, etc.
 
 echo "Got the following CSRs:"
 ${CMD} get csr | grep Pending | grep :node-bootstrapper
