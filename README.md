@@ -44,6 +44,7 @@ connectivity.
     - worker2
     - api (should point to services)
     - console-openshift-console.apps (should point to services)
+
     (the above are all qualified with ``cluster_name``.``parent_domain``)
 7. Run the ``site.yml`` playbook.
 8. Get coffee.
