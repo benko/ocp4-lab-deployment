@@ -33,7 +33,7 @@
 
     - name: warn about accessibility
       debug:
-        msg: |
+        msg: >
           If you have not yet, this would be a good time to configure and start
           your VPN connection to the services VM as the cluster nodes will
           probably be unreachable directly with this networking configuration.
