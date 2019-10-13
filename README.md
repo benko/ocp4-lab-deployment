@@ -28,7 +28,7 @@ The topology of the lab rendered by this project is as follows:
  - 1 service VM running RHEL8 and the following:
     - a DNS server for the internal OCP zones and forwarding enabled
     - a DHCP/TFTP PXE boot environment for RHCOS
-    - a HTTP server for RHCOS boot artifacts and other misc
+    - an HTTP server for RHCOS boot artifacts and other misc
     - an Haproxy load balancer for OCP install (and optionally, ingress)
     - a Nexus3 OSS Repository Manager for facilitating the airgap
     - an NFS server to provide the cluster with storage
@@ -40,8 +40,9 @@ The topology of the lab rendered by this project is as follows:
 ## System Requirements
 
 The host system requirements for running the above are relatively modest - it
-works (to a decent degree) within 24GB RAM, but will certainly not mind having
-a bit extra on the side.
+deploys with 16GB RAM, and it works (to a decent degree) within 24GB RAM, but
+will certainly not mind having you bump up the VM specs with a bit of extra on
+the side.
 
 Individual VM recommendations are as follows:
 
@@ -51,6 +52,8 @@ Individual VM recommendations are as follows:
  - bootstrap VM: 4GB, 4 cores
 
 Disk space is thin-provisioned, but defaults to 64GB per system (single image).
+Actual disk utilisation amounts to about 32GB immediately after the
+installation, but will obviously grow.
 
 ## Software Requirements
 
@@ -105,17 +108,20 @@ need to change bits and pieces here and there.
 ### A Quirk!
 
 At any rate, regardless of what kind of network model you decide to use, it is
-your responsibility to make sure all the VMs resolve correctly, which becomes
-particularly important from the point where services VM is up and running.
+your responsibility to make sure all the VM hostnames resolve correctly on the
+control node, which becomes particularly important from the point where
+services VM is up and running.
 
-You have two general options:
+You have three general options:
 
  - add every single host to /etc/hosts (this will do for installation)
+ - use the inventory option ``ansible_host`` (similar, but untested)
  - establish a vpn tunnel to services and use its DNS server
 
 Obviously the latter has a clear advantage of being able to use the cluster
 wildcard DNS domain after everything is up, and ingress will work just fine for
-you, but there is this critical moment *after* the services VM is already
+you, but it still requires you to have the services VM in /etc/hosts somewhere,
+and there is this critical moment *after* the services VM is already
 configured, where you have to actually remember to start up a VPN client and
 configure it correctly.
 
