@@ -1,0 +1,26 @@
+---
+- name: wait for workers to dial in and approve them
+  hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+    - name: tell what we're doing
+      debug:
+        msg: >
+          Waiting for the worker nodes to dial in and register with master.
+          This may take a while, so be patient.
+
+    - name: make sure the approval script is executable
+      file:
+        path: files/approve-workers.sh
+        mode: 0755
+        state: file
+
+    - name: now just run the approval script and wait
+      command: files/approve-workers.sh
+      register: output
+
+    - name: show the results
+      debug:
+        var: output.stdout_lines
+...

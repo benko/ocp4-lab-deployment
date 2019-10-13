@@ -1,0 +1,22 @@
+---
+- name: wait for the installation to report ready
+  hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+    - name: tell what we're doing
+      debug:
+        msg: >
+          Waiting for the OpenShift Installer to report complete status. This
+          may take a while, so be patient.
+
+    - name: invoke wait-for install-complete
+      delegate_to: localhost
+      become: no
+      command: "{{ openshift_installer_path }} --dir={{ openshift_rtdata_path }} --log-level=debug wait-for install-complete"
+      register: output
+
+    - name: show the results
+      debug:
+        var: output.stdout_lines
+...
