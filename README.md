@@ -23,7 +23,12 @@ connectivity.
 
 ## TL;DR
 
-0. Go to try.openshift.com and do your thing. Download stuff.
+0. Go to [OpenShift Download Page](try.openshift.com) and do your thing.
+   Download stuff.
+    - nightly installer build
+    - nightly client build
+    - RHCOS kernel and initrd
+    - RHCOS bare metal image for both BIOS and UEFI
 1. Get the rest of the stuff:
     - clone this project
     - download [Nexus3 OSS](https://www.sonatype.com/download-nexus-repo-oss)
@@ -133,6 +138,16 @@ Additional software you will need before you proceed with your VMs:
    [from EPEL8](https://epel.ip-connect.info/8/Everything/x86_64/Packages/) and
    a client (optional)
 
+The one extra artifact that is unique to this project is the initial [backup of
+Nexus configuration
+database](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view).
+It contains the proxy repository definitions for the upstream ``quay.io`` and
+``registry.redhat.io`` registries. What it does ***not*** contain though, is
+authentication data which you will have to extract out of your pull secret and
+feed to it. See below for more.
+
+> NOTE: The configuration database backup does not include container images.
+
 Eventually, once you did a connected installation, you can create a backup of
 Nexus repositories and include that in your future deployments.
 
@@ -170,7 +185,8 @@ You have three general options:
 
 Obviously the latter has a clear advantage of being able to use the cluster
 wildcard DNS domain after everything is up, and ingress will work just fine for
-you. Read the OpenVPN section below for more if that's what you want.
+you. Read the Non-Bridged Networking and OpenVPN sections below for more if
+that's what you want.
 
 There may be reasons for you to decide against it, and it's fine - that's why
 this is a configurable option. You can use whatever other option you wish to
@@ -194,7 +210,8 @@ This can go in any direction, really. Some basics:
 #### Non-Bridged Networking Considerations
 
 For non-bridged networks, you will most certainly need two network interfaces
-in the ``services`` VM.
+in the ``services`` VM, unless you are running the playbooks on the hypervisor
+itself - in that case you probably have direct access to the virt network.
 
 One of the interfaces would be configured by the playbook already - that's
 fine. Keep it, as it allows your cluster hosts on the private network to
@@ -208,8 +225,8 @@ on it so you (and the playbooks) can get into the cluster.
 The idea is your control node is an external client to the airgapped system, so
 it needs a VPN connection to access the resources - a nice real-life scenario.
 
-See the section below, ``group_vars/all.yml``, and the service provisioning
-playbook for more on configuration.
+See the OpenVPN section below, ``group_vars/all.yml``, and the service
+provisioning playbook for more on configuration.
 
 ### Playtime Configuration Variables
 
@@ -293,7 +310,10 @@ they simply save time. Such as:
  - ``rhsm``
 
     Skipping this tag will skip any subscription-related action. RHSM can be
-    slow, and this just skips those slow steps.
+    slow, and this just skips those slow steps, but if you never did it before,
+    it also prevents your services VM from being updated with the latest
+    package goodness, and will most certainly break any additional software
+    installations. So in short, do it once, then start skipping it.
 
  - ``openvpn``
 
@@ -301,7 +321,7 @@ they simply save time. Such as:
     OpenVPN service, for whatever reason, so skipping this tag allows you to
     simply not even care about the RPMs this would normally use, much less
     about the configuration of the service and any other bollocks. It does
-    mean, however, that you need to eat your own DNS food. /etc/hosts FTW!
+    mean, however, that you need to eat your own DNS food. ``/etc/hosts`` FTW!
 
  - ``nexus_restore``
 
