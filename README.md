@@ -27,8 +27,8 @@ connectivity.
 1. Get the rest of the stuff:
     - clone this project
     - download Nexus3 OSS
-    - get Nexus [https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing](configuration backup here)
-    - if you decide to set up a vpn connection to services VM, [https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing](download it from EPEL8) (see below for more)
+    - get Nexus [configuration backup here](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing)
+    - if you decide to set up a vpn connection to services VM, [download it from EPEL8](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing) (see below for more)
 2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target
    hypervisor.
 3. Look at the ``group_vars/all.yml`` file and:
@@ -112,7 +112,7 @@ on, of course, what it is.
 TBD.
 
 For the control node, you will also need the following from the
-[https://try.openshift.com/](Red Hat Cloud Management Dashboard):
+[Red Hat Cloud Management Dashboard](https://try.openshift.com/):
 
  - OpenShift Installer nightly build (I used 4.2.0-0 20191007-203748)
  - OpenShift Client nightly build (same version as installer)
@@ -120,15 +120,15 @@ For the control node, you will also need the following from the
 Additional software you will need before you proceed with your VMs:
 
  - RHEL 8.0 GA boot ISO image (I suggest you join
-   [https://developers.redhat.com/](Red Hat Developer Program) if
+   [Red Hat Developer Program](https://developers.redhat.com/) if
    you don't intend to use this for production, **which you shouldn't anyway**,
    because it's a totally unsupportable lab-only architecture)
  - RHEL CoreOS 42.80 boot and ostree images (I used 42.80.20190828.2, available
-   from the [https://try.openshift.com/](Cloud Management)'s download page)
+   from the [Cloud Management](https://try.openshift.com/)'s download page)
  - Nexus Repository Manager OSS v3 UNIX archive (I used v3.19.1-01, available
-   from [https://www.sonatype.com/download-nexus-repo-oss](Sonatype]))
+   from [Sonatype](https://www.sonatype.com/download-nexus-repo-oss))
  - OpenVPN and PKCS11 Helper RPMs
-   [https://epel.ip-connect.info/8/Everything/x86_64/Packages/](from EPEL8) and
+   [from EPEL8](https://epel.ip-connect.info/8/Everything/x86_64/Packages/) and
    a client (optional)
 
 Eventually, once you did a connected installation, you can create a backup of
@@ -375,7 +375,7 @@ While I agree that the message could hardly be more ambiguous (maybe if it just
 said, "SUCCESS: certificate exists"?) this is not the matter of discussion
 here. Fix your time sync.
 
-https://access.redhat.com/solutions/4355651
+[This is the RH knowledge base explanation of the problem.](https://access.redhat.com/solutions/4355651)
 
 ### RHEL8
 
@@ -396,7 +396,7 @@ These are still to be researched, but have occurred:
     cert on all hosts but one RHEL8 machine, even after a complete package
     update.
 
-    It seems the root cause is https://github.com/ansible/ansible/issues/55495
+    It seems the [root cause](https://github.com/ansible/ansible/issues/55495) is actually a bug.
 
     Augmented the task with ``select_crypto_backend=pyopenssl``.
 
