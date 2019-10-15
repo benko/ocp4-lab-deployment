@@ -142,11 +142,13 @@ The one extra artifact that is unique to this project is the initial [backup of
 Nexus configuration
 database](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view).
 It contains the proxy repository definitions for the upstream ``quay.io`` and
-``registry.redhat.io`` registries. What it does ***not*** contain though, is
-authentication data which you will have to extract out of your pull secret and
-feed to it. See below for more.
+``registry.redhat.io`` registries, and some other minor configuration bits.
+What it does ***not*** contain though, is authentication data which you will
+have to extract out of your pull secret and feed to it. See below for more.
 
 > NOTE: The configuration database backup does not include container images.
+That is a separate backup called the blob backup, which you will be able to
+create after the first successful installation.
 
 Eventually, once you did a connected installation, you can create a backup of
 Nexus repositories and include that in your future deployments.
