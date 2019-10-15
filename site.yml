@@ -1,6 +1,10 @@
 ---
 - import_playbook: 00-provision-vm-services.yml
+  tags:
+    - services_vm
 - import_playbook: 01-configure-vm-services.yml
+  tags:
+    - services_vm
 - import_playbook: 10-conf-generate-ignition.yml
 - import_playbook: 11-provision-vm-bootstrap.yml
 - import_playbook: 12-provision-vm-master.yml

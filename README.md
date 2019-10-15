@@ -26,9 +26,11 @@ connectivity.
 0. Go to try.openshift.com and do your thing. Download stuff.
 1. Get the rest of the stuff:
     - clone this project
-    - download Nexus3 OSS
+    - download [Nexus3 OSS](https://www.sonatype.com/download-nexus-repo-oss)
     - get Nexus [configuration backup here](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing)
+    - get a RHEL8 image from the [Red Hat Developer Program](https://developers.redhat.com/)
     - if you decide to set up a vpn connection to services VM, [download it from EPEL8](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing) (see below for more)
+    - put all of the above into ``binaries/`` directory in this project
 2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target
    hypervisor.
 3. Look at the ``group_vars/all.yml`` file and:
@@ -313,6 +315,14 @@ they simply save time. Such as:
     If you're planning on redeploying the cluster several times in a very short
     period of time, it might make sense to keep the bootstrap VM as a member of
     load balancing groups in haproxy. Skipping this tag will allow you do it.
+
+ - ``services_vm``
+
+    When running the master ``site.yml`` playbook, when you get to the point
+    where the services VM is up, but you need more time than what you are
+    given, you can interrupt the execution and then resume at an arbitrary
+    point in the future *without re-running* services VM provisioning and
+    configuration by just skipping this tag.
 
 ## Notes on OpenVPN
 
