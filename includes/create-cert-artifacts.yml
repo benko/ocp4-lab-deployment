@@ -88,6 +88,7 @@
 
 - name: "[{{ cert_service_name }}]: create a new certificate"
   openssl_certificate:
+    select_crypto_backend: pyopenssl
     provider: ownca
     ownca_not_after: "{{ x509_validity_until }}"
     ownca_path: "{{ x509_ca_location }}/ca.crt"

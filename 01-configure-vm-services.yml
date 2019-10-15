@@ -98,6 +98,7 @@
 
     - name: create a new self-signed ca certificate if needed
       openssl_certificate:
+        select_crypto_backend: pyopenssl
         provider: selfsigned
         selfsigned_not_after: "{{ x509_validity_until }}"
         path: "{{ x509_ca_location }}/ca.crt"

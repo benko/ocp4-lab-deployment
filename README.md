@@ -347,6 +347,10 @@ These are still to be researched, but have occurred:
     cert on all hosts but one RHEL8 machine, even after a complete package
     update.
 
+    It seems the root cause is https://github.com/ansible/ansible/issues/55495
+
+    Augmented the task with ``select_crypto_backend=pyopenssl``.
+
  - ``coreos-installer[]: failed fetching image headers from http://services.lab.example.com/rhcos-x.y.z-w-metal-bios.raw.gz``
 
     What can I say. Bridged network on a RHEL8 host? The services VM was fine, the network was 
