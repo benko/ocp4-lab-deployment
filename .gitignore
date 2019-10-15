@@ -3,3 +3,4 @@ binaries/
 *.vim
 .*.swp
 auth-nogit.*
+.DS_Store
