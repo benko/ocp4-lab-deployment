@@ -353,7 +353,8 @@ These are still to be researched, but have occurred:
 
  - ``coreos-installer[]: failed fetching image headers from http://services.lab.example.com/rhcos-x.y.z-w-metal-bios.raw.gz``
 
-    What can I say. Bridged network on a RHEL8 host? The services VM was fine, the network was 
+    What can I say. Bridged network on a RHEL8 host? The services VM was fine,
+    the network was there, but the bootstrap node wasn't cooperating.
 
 ## Links & References
 
