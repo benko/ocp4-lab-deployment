@@ -795,4 +795,27 @@
         path: "{{ item.path }}"
         state: absent
       loop: "{{ backups.files }}"
+
+# produce a note telling everyone to stop drinking coffee and start working
+- name: hello! time to wake up!
+  hosts: localhost
+  become: no
+  gather_facts: no
+  tasks:
+    - name: produce a notification
+      pause:
+        prompt: |
+          *********************************************************************
+          * THE SERVICES VM PROVISIONING IS NOW COMPLETE.                     *
+          *                                                                   *
+          * BEFORE THIS PROCESS CONTINUES, YOU MUST MAKE SURE OF TWO THINGS:  *
+          * - YOUR RESOLVER MUST NOW INCLUDE ALL THE CLUSTER VMS AND LB       *
+          *   (you can establish a VPN connection to services for that NOW)   *
+          * - YOU MUST DO YOUR INITIAL NEXUS CONFIGURATION ON THE SERVICES VM *
+          *   (go to http://services:8081/ and log in as admin/admin123)      *
+          *                                                                   *
+          * THIS PROCESS WILL NOW PAUSE FOR 30 SECONDS TO GIVE YOU A CHANCE   *
+          * TO CLEANLY INTERRUPT IT OR CHOOSE TO CONTINUE. (press Ctrl-C)     *
+          *********************************************************************
+        seconds: 30
 ...
