@@ -148,10 +148,8 @@ have to extract out of your pull secret and feed to it. See below for more.
 
 > NOTE: The configuration database backup does not include container images.
 That is a separate backup called the blob backup, which you will be able to
-create after the first successful installation.
-
-Eventually, once you did a connected installation, you can create a backup of
-Nexus repositories and include that in your future deployments.
+create after the first successful installation and then use for any subsequent
+deployments of this system.
 
 ## Configuration
 
@@ -431,6 +429,10 @@ These are still to be researched, but have occurred:
     It seems the [root cause](https://github.com/ansible/ansible/issues/55495) is actually a bug.
 
     Augmented the task with ``select_crypto_backend=pyopenssl``.
+
+    Unfortunately, I've yet to test how well this works on RHEL7 then.
+
+    TODO: test pyopenssl on rhel7. there. done.
 
  - ``coreos-installer[]: failed fetching image headers from http://services.lab.example.com/rhcos-x.y.z-w-metal-bios.raw.gz``
 
