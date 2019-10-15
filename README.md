@@ -24,20 +24,29 @@ connectivity.
 ## TL;DR
 
 0. Go to try.openshift.com and do your thing. Download stuff.
-1. Clone this project.
-2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target hypervisor.
+1. Get the rest of the stuff:
+    - clone this project
+    - download Nexus3 OSS
+    - get Nexus [https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing](configuration backup here)
+    - if you decide to set up a vpn connection to services VM, [https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing](download it from EPEL8) (see below for more)
+2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target
+   hypervisor.
 3. Look at the ``group_vars/all.yml`` file and:
     - choose a ``parent_domain`` and the ``cluster_name``
     - set ``fwd_dns_server`` to a working DNS that can resolve the interweb
     - set ``svc_default_gw`` to an actual working gateway
     - change ``ip_prefix`` if necessary (only in special cases though)
-    - pick your networking type (``vm_use_bridge=yes`` or ``no``) and provide details
-    - decide if you want services VM to have an additional interface and configure it (``vm_svc_add_interface``)
+    - pick your networking type (``vm_use_bridge=yes`` or ``no``) and provide
+      details
+    - decide if you want services VM to have an additional interface and
+      configure it (``vm_svc_add_interface``)
     - have a look at the VM catalog and see if anything stands out (shouldn't)
     - provide authorised user data and the pull secret at the end
 4. Look at ``group_vars/rhel.yml`` and fill in your own information.
-5. Make sure /etc/hosts (or some other means) can resolve at least the services VM
-6. If you chose to not use OpenVPN, make sure you also add these to your resolver:
+5. Make sure ``/etc/hosts`` (or some other means) can resolve at least the
+   services VM
+6. If you chose to not use OpenVPN, make sure you also add these to your
+   resolver:
     - bootstrap
     - master
     - worker1
@@ -48,7 +57,8 @@ connectivity.
     (the above are all qualified with ``cluster_name``.``parent_domain``)
 7. Run the ``site.yml`` playbook.
 8. Get coffee.
-9. Read the rest of the document (and submit any issues).
+9. Read the rest of the document, particularly the section on Nexus
+   configuration (and submit any issues).
 
 ## Topology
 
@@ -96,21 +106,30 @@ on RHEL7, RHEL8, and even CentOS systems, so you should be good to go.
 That being said, **the absolute minimum version of Ansible is 2.8**!
 
 Some of the Ansible modules used require additional Python modules on the
-control node, which might not be installed by default on your system.
+control node, which might not be installed by default on your system, depending
+on, of course, what it is.
 
 TBD.
 
-For the control node, you will also need the following:
+For the control node, you will also need the following from the
+[https://try.openshift.com/](Red Hat Cloud Management Dashboard):
 
  - OpenShift Installer nightly build (I used 4.2.0-0 20191007-203748)
  - OpenShift Client nightly build (same version as installer)
 
 Additional software you will need before you proceed with your VMs:
 
- - RHEL 8.0 GA boot ISO image
- - RHEL CoreOS 42.80 boot and ostree images (I used 42.80.20190828.2)
- - Nexus Repository Manager OSS v3 UNIX archive (I used v3.19.1-01)
- - OpenVPN and PKCS11 Helper RPMs from EPEL8 and a client (optional)
+ - RHEL 8.0 GA boot ISO image (I suggest you join
+   [https://developers.redhat.com/](Red Hat Developer Program) if
+   you don't intend to use this for production, **which you shouldn't anyway**,
+   because it's a totally unsupportable lab-only architecture)
+ - RHEL CoreOS 42.80 boot and ostree images (I used 42.80.20190828.2, available
+   from the [https://try.openshift.com/](Cloud Management)'s download page)
+ - Nexus Repository Manager OSS v3 UNIX archive (I used v3.19.1-01, available
+   from [https://www.sonatype.com/download-nexus-repo-oss](Sonatype]))
+ - OpenVPN and PKCS11 Helper RPMs
+   [https://epel.ip-connect.info/8/Everything/x86_64/Packages/](from EPEL8) and
+   a client (optional)
 
 Eventually, once you did a connected installation, you can create a backup of
 Nexus repositories and include that in your future deployments.
@@ -149,14 +168,19 @@ You have three general options:
 
 Obviously the latter has a clear advantage of being able to use the cluster
 wildcard DNS domain after everything is up, and ingress will work just fine for
-you, but it still requires you to have the services VM in /etc/hosts somewhere,
-and there is this critical moment *after* the services VM is already
-configured, where you have to actually remember to start up a VPN client and
-configure it correctly.
+you. Read the OpenVPN section below for more if that's what you want.
 
-More on either of that below.
+There may be reasons for you to decide against it, and it's fine - that's why
+this is a configurable option. You can use whatever other option you wish to
+fix the resolver.
 
-TODO: perhaps just move most of this to the openvpn section
+At any rate, at some point you will see a notification after the services VM is
+up and running, telling you to go to Nexus and configure authentication. That
+is a sure sign the only thing between you and a cluster is just a couple of
+additional steps.
+
+Read below for more on Nexus configuration. You will need this to complete the
+set-up successfully.
 
 ### Virtualization Host Configuration
 
@@ -292,11 +316,36 @@ they simply save time. Such as:
 
 ## Notes on OpenVPN
 
-The network configuration for cluster VMs has to change a bit with OpenVPN.
-After all, you want to be getting a response from the VMs, right? So they need
-to have the correct default gateway set.
+As already mentioned, OpenVPN has an advantage over other resolver setup
+options in that the services VM is set up to resolve your cluster to begin
+with, and it's also able to use the cluster wildcard DNS domain after
+everything is up, and ingress will work just fine for you.
 
-TODO: finish this.
+That is because it comes with a DNS server it is willing to share with you, so
+when you establish a VPN connection to it, you can simply tell your client to
+use its DNS as the primary DNS for your workstation (it is preconfigured to
+relay any queries for non-authoritative zones back to your original DNS - that
+is, if you put it into ``all.yml`` file).
+
+The network configuration for cluster VMs has to change a bit with OpenVPN,
+though.  After all, you want to be getting a response from the VMs, right? So
+they need to have the correct default gateway set.
+
+So this time around, as opposed to giving the VMs a bogus default gateway, we
+need to set it to the actual services VM IP address.
+
+Also, for the purposes of being able to run the services VM configuration
+playbook, you are still required to have the services VM in /etc/hosts
+somewhere.
+
+There is also this critical moment *after* the services VM is already
+configured, where you have to actually remember to start up a VPN client and
+configure it correctly.
+
+You will see a message and will be given a pause that will allow you to do
+everything needed before the playbook continues, and give you instructions on
+what to do if you want to just interrupt the execution and continue from where
+you left off after a while.
 
 TODO: where are the certs for the client?
 
