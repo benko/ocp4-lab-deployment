@@ -153,6 +153,8 @@
         - ca.crt
         - openvpn.crt
         - openvpn.key
+      tags:
+        - openvpn
 
     # openvpn installation
     - name: see if we need to install openvpn
