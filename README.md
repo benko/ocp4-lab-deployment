@@ -34,7 +34,7 @@ connectivity.
     - download [Nexus3 OSS](https://www.sonatype.com/download-nexus-repo-oss)
     - get Nexus [configuration backup here](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing)
     - get a RHEL8 image from the [Red Hat Developer Program](https://developers.redhat.com/)
-    - if you decide to set up a vpn connection to services VM, [download it from EPEL8](https://drive.google.com/file/d/1cXPqnoQEP8mWM9LjEsaA9N5GtjPbu3H0/view?usp=sharing) (see below for more)
+    - if you decide to set up a vpn connection to services VM, [download it from EPEL8](https://epel.ip-connect.info/8/Everything/x86_64/Packages/) (see below for more)
     - put all of the above into ``binaries/`` directory in this project
 2. Edit the ``[hypervisors]`` section of the hosts file to reflect your target
    hypervisor.
