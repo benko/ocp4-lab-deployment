@@ -17,7 +17,7 @@
         state: file
 
     - name: now just run the approval script and wait
-      command: files/approve-workers.sh
+      command: files/approve-workers.sh {{ oc_bin }} {{ openshift_rtdata_path }} {{ vms.worker1.hostname }} {{ vms.worker2.hostname }}
       register: output
 
     - name: show the results
