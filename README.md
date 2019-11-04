@@ -23,7 +23,7 @@ connectivity.
 
 ## TL;DR
 
-0. Go to [OpenShift Download Page](try.openshift.com) and do your thing.
+0. Go to [OpenShift Download Page](https://try.openshift.com/) and do your thing.
    Download stuff.
     - nightly installer build
     - nightly client build
