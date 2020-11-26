@@ -1,4 +1,5 @@
 cluster/
+cluster-20*
 binaries/
 *.vim
 .*.swp
