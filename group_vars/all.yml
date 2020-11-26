@@ -6,22 +6,59 @@
 # Some suggestions on where to put things:
 #  - binary artifacts path (easier .gitignore - MAKE IT A RELATIVE PATH!)
 binary_artifact_path: binaries/
+
 #  - the cluster state directory (same here - MAKE IT A RELATIVE PATH!)
 openshift_rtdata_path: cluster/
+
 #  - the installer and client binaries
 openshift_installer_path: "{{ binary_artifact_path }}/openshift-install"
 oc_bin: "{{ binary_artifact_path }}/oc"
+
 #  - the RHEL ISO image to use (all expected in binary_artifact_path)
 rhel8_artifacts:
   - rhel-8.0-x86_64-dvd.iso
+
 #  - the RHEL CoreOS release and artifacts (same, binary_artifact_path)
-coreos_release: 42.80.20190828.2
+#     NOTE: use the following image names prior to 4.3.0:
+#           coreos_release: 4.2.0-x86_64
+#           coreos_arch: x86_64
+#           coreos_http_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal-bios.raw.gz
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal-uefi.raw.gz
+#           coreos_tftp_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-kernel
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-initramfs.img
+#     NOTE: use the following image names for 4.3.0:
+#           coreos_release: 4.3.0-x86_64
+#           coreos_arch: x86_64
+#           coreos_http_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal.raw.gz
+#           coreos_tftp_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-kernel
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-initramfs.img
+#     NOTE: use the following image names between 4.3.8 and 4.6.0:
+#           coreos_release: 4.3.8
+#           coreos_arch: x86_64
+#           coreos_http_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal.{{ coreos_arch }}.raw.gz
+#           coreos_tftp_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-kernel-{{ coreos_arch }}
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-installer-initramfs.{{ coreos_arch }}.img
+#     NOTE: use the following image names for 4.6.1 and newer:
+#           coreos_release: 4.6.1
+#           coreos_arch: x86_64
+#           coreos_http_artifacts:
+#             - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal.{{ coreos_arch }}.raw.gz
+#           coreos_tftp_artifacts:
+#             - rhcos-{{ coreos_release }}-live-kernel-{{ coreos_arch }}
+#             - rhcos-{{ coreos_release }}-live-initramfs.{{ coreos_arch }}.img
+coreos_release: 4.6.1
+coreos_arch: x86_64
 coreos_http_artifacts:
-  - rhcos-{{ coreos_release }}-metal-bios.raw.gz
-  - rhcos-{{ coreos_release }}-metal-uefi.raw.gz
+  - rhcos-{{ coreos_release }}-{{ coreos_arch }}-metal.{{ coreos_arch }}.raw.gz
 coreos_tftp_artifacts:
-  - rhcos-{{ coreos_release }}-installer-kernel
-  - rhcos-{{ coreos_release }}-installer-initramfs.img
+  - rhcos-{{ coreos_release }}-{{ coreos_arch }}-live-kernel-{{ coreos_arch }}
+  - rhcos-{{ coreos_release }}-{{ coreos_arch }}-live-initramfs.{{ coreos_arch }}.img
 
 # Other package versions - these are also expected in binary_artifact_path.
 # OpenVPN and PKCS11 helper are optional, skip with --skip-tags=openvpn
@@ -78,7 +115,7 @@ vm_svc_add_netmask: 255.255.255.0
 # The deployed image URLs. These will depend on the version of OpenShift
 # installer you use, but should be OK for nightly builds. What they mostly
 # affect is just what image URLs the installer will use Nexus for.
-ocp_release_image: openshift-release-dev/ocp-release-nightly
+ocp_release_image: openshift-release-dev/ocp-release
 ocp_worker_image: openshift-release-dev/ocp-v4.0-art-dev
 
 # Any additional content that should be mirrored in the Nexus repo.  Do note
