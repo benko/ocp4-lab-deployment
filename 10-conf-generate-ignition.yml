@@ -31,6 +31,11 @@
         src: templates/install-config.yaml.j2
         dest: cluster/install-config.yaml
 
+    - name: make a backup of installer template
+      copy:
+        src: cluster/install-config.yaml
+        dest: cluster/install-config-backup.yaml
+
     - name: generate ignition configs
       command: "{{ openshift_installer_path }} create ignition-configs --dir={{ openshift_rtdata_path }}"
 
